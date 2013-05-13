@@ -13,28 +13,6 @@
 #define LEVELS 24
 #define BYTES (2 * 2 * LEVELS / 8)
 
-double brightness[] = {
-	1,
-	3,
-	5,
-	10,
-	255,
-	255,
-	255,
-	255,
-	255,
-	255,
-	255,
-	255,
-	255,
-	255,
-	255,
-	255,
-	768,
-	1024,
-	2048,
-};
-
 int quadcmp(const void *v1, const void *v2) {
 	const unsigned char *q1 = v1;
 	const unsigned char *q2 = v2;
@@ -131,6 +109,7 @@ void quad2xy(unsigned long long quad, int *ox, int *oy, int z, int x, int y) {
 	*oy = wy >> (32 - z - 8);
 }
 
+// http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
 void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, int add) {
 	if (x0 < 0 && x1 < 0) {
 		return;
@@ -165,15 +144,33 @@ void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, in
 		}
 
 		if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
-			image[4 * (y0 * 256 + x0) + 0] = 64;
+			int rem = 0;
 
-			int bright = image[4 * (y0 * 256 + x0) + 1] + add;
+			int bright = image[4 * (y0 * 256 + x0) + 1];
+			if (bright == 0) {
+				bright = 72;
+			}
+			bright += add;
 			if (bright > 255) {
+				rem = (bright - 255) / 8;
 				bright = 255;
 			}
 			image[4 * (y0 * 256 + x0) + 1] = bright;
 
-			image[4 * (y0 * 256 + x0) + 2] = 64;
+			if (image[4 * (y0 * 256 + x0) + 0] == 0) {
+				image[4 * (y0 * 256 + x0) + 0] = 64;
+				image[4 * (y0 * 256 + x0) + 2] = 64;
+			} else {
+				rem += image[4 * (y0 * 256 + x0) + 0];
+
+				if (rem > 255) {
+					rem = 255;
+				}
+				image[4 * (y0 * 256 + x0) + 0] = rem;
+				image[4 * (y0 * 256 + x0) + 2] = rem;
+			}
+
+
 			image[4 * (y0 * 256 + x0) + 3] = 255;
 		}
 
