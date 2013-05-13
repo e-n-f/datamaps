@@ -87,6 +87,45 @@ void quad2buf(unsigned long long quad, unsigned char *buf) {
 	}
 }
 
+void quad2xy(unsigned long long quad, unsigned int *x, unsigned int *y, int z) {
+	int n;
+
+	*x = 0;
+	*y = 0;
+
+	for (n = 0; n < 8; n++) {
+		*x |= ((quad >> (2 * (32 - z - 8 + n))) & 1) << n;
+		*y |= ((quad >> (2 * (32 - z - 8 + n) + 1)) & 1) << n;
+	}
+}
+
+void drawLine(int x0, int y0, int x1, int y1, unsigned char *image) {
+        int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
+        int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
+        int err = ((dx > dy) ? dx : -dy) / 2, e2;
+
+	while (1) {
+		image[4 * (y0 * 256 + x0) + 0] = 0;
+		image[4 * (y0 * 256 + x0) + 1] = 255;
+		image[4 * (y0 * 256 + x0) + 2] = 0;
+		image[4 * (y0 * 256 + x0) + 3] = 255;
+
+                if (x0 == x1 && y0 == y1) {
+			break;
+		}
+
+                e2 = err;
+                if (e2 > -dx) { 
+			err -= dy;
+			x0 += sx;
+		}
+                if (e2 <  dy) {
+			err += dx;
+			y0 += sy;
+		}
+        }
+}
+
 int main(int argc, char **argv) {
 	if (argc < 4) {
 		fprintf(stderr, "Usage: %s zoom x y\n", argv[0]);
@@ -178,27 +217,16 @@ int main(int argc, char **argv) {
 
 		unsigned int j;
 		for (j = 0; j < count; j += step) {
-			unsigned long long quad = buf2quad(start + j * BYTES);
-			int xx = 0, yy = 0;
-			int n;
+			unsigned long long quad1 = buf2quad(start + j * BYTES);
+			unsigned long long quad2 = buf2quad(start + j * BYTES + BYTES / 2);
 
-			for (n = 0; n < 8; n++) {
-				xx |= ((quad >> (2 * (32 - z - 8 + n))) & 1) << n;
-				yy |= ((quad >> (2 * (32 - z - 8 + n) + 1)) & 1) << n;
-			}
+			unsigned int x1, y1;
+			unsigned int x2, y2;
 
-			if (image[4 * (yy * 256 + xx) + 1] == 255) {
-	#define STEP 3
-				if ((int) image[4 * (yy * 256 + xx) + 0] + STEP <= 255) {
-					image[4 * (yy * 256 + xx) + 0] += STEP;
-					image[4 * (yy * 256 + xx) + 2] += STEP;
-				}
-			} else {
-				image[4 * (yy * 256 + xx) + 0] = 0;
-				image[4 * (yy * 256 + xx) + 1] = 255;
-				image[4 * (yy * 256 + xx) + 2] = 0;
-				image[4 * (yy * 256 + xx) + 3] = 255;
-			}
+			quad2xy(quad1, &x1, &y1, z);
+			quad2xy(quad2, &x2, &y2, z);
+
+			drawLine(x1, y1, x2, y2, image);
 		}
 
 		munmap(map, st.st_size);
