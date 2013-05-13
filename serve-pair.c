@@ -13,6 +13,28 @@
 #define LEVELS 24
 #define BYTES (2 * 2 * LEVELS / 8)
 
+double brightness[] = {
+	1,
+	3,
+	5,
+	10,
+	255,
+	255,
+	255,
+	255,
+	255,
+	255,
+	255,
+	255,
+	255,
+	255,
+	255,
+	255,
+	768,
+	1024,
+	2048,
+};
+
 int quadcmp(const void *v1, const void *v2) {
 	const unsigned char *q1 = v1;
 	const unsigned char *q2 = v2;
@@ -87,31 +109,72 @@ void quad2buf(unsigned long long quad, unsigned char *buf) {
 	}
 }
 
-void quad2xy(unsigned long long quad, unsigned int *x, unsigned int *y, int z) {
-	int n;
+void quad2xy(unsigned long long quad, int *ox, int *oy, int z, int x, int y) {
+	long long wx = 0, wy = 0;
+	int i;
 
-	*x = 0;
-	*y = 0;
+	// first decode into world coordinates
 
-	for (n = 0; n < 8; n++) {
-		*x |= ((quad >> (2 * (32 - z - 8 + n))) & 1) << n;
-		*y |= ((quad >> (2 * (32 - z - 8 + n) + 1)) & 1) << n;
-	}
+        for (i = 0; i < 32; i++) {
+                wx |= ((quad >> (i * 2)) & 1) << i;
+                wy |= ((quad >> (i * 2 + 1)) & 1) << i;
+        }
+
+	// then offset origin
+
+	wx -= (long long) x << (32 - z);
+	wy -= (long long) y << (32 - z);
+
+	// then scale. requires sign-extending shift
+
+	*ox = wx >> (32 - z - 8);
+	*oy = wy >> (32 - z - 8);
 }
 
-void drawLine(int x0, int y0, int x1, int y1, unsigned char *image) {
+void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, int add) {
+	if (x0 < 0 && x1 < 0) {
+		return;
+	}
+	if (x0 > 255 && x1 > 255) {
+		return;
+	}
+	if (y0 < 0 && y1 < 0) {
+		return;
+	}
+	if (y0 > 255 && y1 > 255) {
+		return;
+	}
+
         int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
         int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
         int err = ((dx > dy) ? dx : -dy) / 2, e2;
 
-	while (1) {
-		image[4 * (y0 * 256 + x0) + 0] = 0;
-		image[4 * (y0 * 256 + x0) + 1] = 255;
-		image[4 * (y0 * 256 + x0) + 2] = 0;
-		image[4 * (y0 * 256 + x0) + 3] = 255;
+	// int add = 256 / sqrt(dx * dx + dy * dy);
+	// int add = exp(log(1.5) * zoom) / sqrt(dx * dx + dy * dy);
+	// int add = brightness[zoom] / sqrt(dx * dx + dy * dy);
 
+	add /= sqrt(dx * dx + dy * dy);
+
+	if (add < 1) {
+		return;
+	}
+
+	while (1) {
                 if (x0 == x1 && y0 == y1) {
 			break;
+		}
+
+		if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
+			image[4 * (y0 * 256 + x0) + 0] = 64;
+
+			int bright = image[4 * (y0 * 256 + x0) + 1] + add;
+			if (bright > 255) {
+				bright = 255;
+			}
+			image[4 * (y0 * 256 + x0) + 1] = bright;
+
+			image[4 * (y0 * 256 + x0) + 2] = 64;
+			image[4 * (y0 * 256 + x0) + 3] = 255;
 		}
 
                 e2 = err;
@@ -124,6 +187,70 @@ void drawLine(int x0, int y0, int x1, int y1, unsigned char *image) {
 			y0 += sy;
 		}
         }
+}
+
+void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *startbuf, unsigned char *endbuf, int step, unsigned char *image, int debug) {
+	char fname[strlen(FNAME) + 3 + 5 + 1];
+	sprintf(fname, "%s/%d.sort", FNAME, zoom);
+
+	int fd = open(fname, O_RDONLY);
+	if (fd < 0) {
+		perror(fname);
+		exit(EXIT_FAILURE);
+	}
+
+	struct stat st;
+	if (fstat(fd, &st) < 0) {
+		perror("stat");
+		exit(EXIT_FAILURE);
+	}
+
+	// fprintf(stderr, "size: %016llx\n", st.st_size);
+
+	unsigned long long *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	if (map == MAP_FAILED) {
+		perror("mmap");
+		exit(EXIT_FAILURE);
+	}
+
+	unsigned char *start = search(startbuf, map, st.st_size / BYTES, BYTES, quadcmp);
+	unsigned char *end = search(endbuf, map, st.st_size / BYTES, BYTES, quadcmp);
+
+	// fprintf(stderr, "%016llx %016llx\n", startquad, endquad);
+	// fprintf(stderr, "%016llx %016llx\n", start - map, end - map);
+
+	end += BYTES; // points to the last value in range; need the one after that
+
+	if (start != end && memcmp(start, end, BYTES) != 0) {
+		start += BYTES; // if not exact match, points to element before match
+	}
+
+	unsigned count = (end - start) / BYTES;
+	fprintf(stderr, "size: %u  %d %d %d\n", count, zoom, x, y);
+
+	// no real rationale for exponent -- chosen by experiment
+	int bright = exp(log(1.53) * z);
+
+	unsigned int j;
+	for (j = 0; j < count; j += step) {
+		unsigned long long quad1 = buf2quad(start + j * BYTES);
+		unsigned long long quad2 = buf2quad(start + j * BYTES + BYTES / 2);
+
+		int x1, y1;
+		int x2, y2;
+
+		quad2xy(quad1, &x1, &y1, z, ox, oy);
+		quad2xy(quad2, &x2, &y2, z, ox, oy);
+
+		if (debug) {
+			fprintf(stderr, "%d,%d %d,%d\n", x1, y1, x2, y2);
+		}
+
+		drawLine(x1, y1, x2, y2, image, z, bright);
+	}
+
+	munmap(map, st.st_size);
+	close(fd);
 }
 
 int main(int argc, char **argv) {
@@ -156,6 +283,8 @@ int main(int argc, char **argv) {
 		dup = 1;
 	}
 
+	step = 1; // XXX
+
 	unsigned long long startquad = 0;
 
 	for (i = 0; i < z; i++) {
@@ -176,61 +305,38 @@ int main(int argc, char **argv) {
 
 	int zoom;
 	for (zoom = z; zoom < z + 8 && zoom < 24; zoom++) {
-		char fname[strlen(FNAME) + 3 + 5 + 1];
-		sprintf(fname, "%s/%d.sort", FNAME, zoom);
+		process(zoom, x, y, z, x, y, startbuf, endbuf, step, image, 0);
+	}
 
-		int fd = open(fname, O_RDONLY);
-		if (fd < 0) {
-			perror(fname);
-			exit(EXIT_FAILURE);
+	int ox = x, oy = y;
+
+	for (zoom = z - 1; zoom >= z - 8 && zoom >= 0; zoom--) {
+		x /= 2;
+		y /= 2;
+
+		fprintf(stderr, "looking at %d %d %d\n", zoom, x, y);
+
+		startquad = 0;
+
+		for (i = 0; i < zoom; i++) {
+			startquad |= ((x >> i) & 1LL) << (2 * (i + (32 - zoom)));
+			startquad |= ((y >> i) & 1LL) << (2 * (i + (32 - zoom)) + 1);
 		}
 
-		struct stat st;
-		if (fstat(fd, &st) < 0) {
-			perror("stat");
-			exit(EXIT_FAILURE);
+		endquad = startquad;
+
+		for (i = 0; i < 32 - zoom; i++) {
+			endquad |= 3LL << (2 * i);
 		}
 
-		// fprintf(stderr, "size: %016llx\n", st.st_size);
+		fprintf(stderr, "that's %llx to %llx\n", startquad, endquad);
 
-		unsigned long long *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-		if (map == MAP_FAILED) {
-			perror("mmap");
-			exit(EXIT_FAILURE);
-		}
+		unsigned char startbuf[BYTES];
+		unsigned char endbuf[BYTES];
+		quad2buf(startquad, startbuf);
+		quad2buf(endquad, endbuf);
 
-
-		unsigned char *start = search(startbuf, map, st.st_size / BYTES, BYTES, quadcmp);
-		unsigned char *end = search(endbuf, map, st.st_size / BYTES, BYTES, quadcmp);
-
-		// fprintf(stderr, "%016llx %016llx\n", startquad, endquad);
-		// fprintf(stderr, "%016llx %016llx\n", start - map, end - map);
-
-		end += BYTES; // points to the last value in range; need the one after that
-
-		if (start != end && memcmp(start, end, BYTES) != 0) {
-			start += BYTES; // if not exact match, points to element before match
-		}
-
-		unsigned count = (end - start) / BYTES;
-		fprintf(stderr, "size: %u  %d %d %d\n", count, zoom, x, y);
-
-		unsigned int j;
-		for (j = 0; j < count; j += step) {
-			unsigned long long quad1 = buf2quad(start + j * BYTES);
-			unsigned long long quad2 = buf2quad(start + j * BYTES + BYTES / 2);
-
-			unsigned int x1, y1;
-			unsigned int x2, y2;
-
-			quad2xy(quad1, &x1, &y1, z);
-			quad2xy(quad2, &x2, &y2, z);
-
-			drawLine(x1, y1, x2, y2, image);
-		}
-
-		munmap(map, st.st_size);
-		close(fd);
+		process(zoom, x, y, z, ox, oy, startbuf, endbuf, 1, image, 0);
 	}
 
 	out(image, 256, 256);
