@@ -111,19 +111,6 @@ void quad2xy(unsigned long long quad, int *ox, int *oy, int z, int x, int y) {
 
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
 void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, int add) {
-	if (x0 < 0 && x1 < 0) {
-		return;
-	}
-	if (x0 > 255 && x1 > 255) {
-		return;
-	}
-	if (y0 < 0 && y1 < 0) {
-		return;
-	}
-	if (y0 > 255 && y1 > 255) {
-		return;
-	}
-
         int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
         int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
         int err = ((dx > dy) ? dx : -dy) / 2, e2;
@@ -131,12 +118,6 @@ void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, in
 	// int add = 256 / sqrt(dx * dx + dy * dy);
 	// int add = exp(log(1.5) * zoom) / sqrt(dx * dx + dy * dy);
 	// int add = brightness[zoom] / sqrt(dx * dx + dy * dy);
-
-	add /= sqrt(dx * dx + dy * dy);
-
-	if (add < 1) {
-		return;
-	}
 
 	while (1) {
                 if (x0 == x1 && y0 == y1) {
@@ -184,6 +165,100 @@ void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, in
 			y0 += sy;
 		}
         }
+}
+
+#define INSIDE 0
+#define LEFT 1
+#define RIGHT 2
+#define BOTTOM 4
+#define TOP 8
+
+// XXX Why doesn't this look right with 0..255?
+// Because of not drawing the last point?
+#define XMIN -1
+#define YMIN -1
+#define XMAX 256
+#define YMAX 256
+
+int computeOutCode(double x, double y) {
+	int code = INSIDE;
+
+	if (x < XMIN) {
+		code |= LEFT;
+	} else if (x > XMAX) {
+		code |= RIGHT;
+	}
+
+	if (y < YMIN) {
+		code |= BOTTOM;
+	} else if (y > YMAX) {
+		code |= TOP;
+	}
+
+	return code;
+}
+
+// http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
+void drawClip(double x0, double y0, double x1, double y1, unsigned char *image, int zoom, int add) {
+        double dx = fabs(x1 - x0);
+        double dy = fabs(y1 - y0);
+	add /= sqrt(dx * dx + dy * dy);
+
+	if (add < 1) {
+		return;
+	}
+
+	int outcode0 = computeOutCode(x0, y0);
+	int outcode1 = computeOutCode(x1, y1);
+	int accept = 0;
+ 
+	while (1) {
+		if (!(outcode0 | outcode1)) { // Bitwise OR is 0. Trivially accept and get out of loop
+			accept = 1;
+			break;
+		} else if (outcode0 & outcode1) { // Bitwise AND is not 0. Trivially reject and get out of loop
+			break;
+		} else {
+			// failed both tests, so calculate the line segment to clip
+			// from an outside point to an intersection with clip edge
+			double x = x0, y = y0;
+ 
+			// At least one endpoint is outside the clip rectangle; pick it.
+			int outcodeOut = outcode0 ? outcode0 : outcode1;
+ 
+			// Now find the intersection point;
+			// use formulas y = y0 + slope * (x - x0), x = x0 + (1 / slope) * (y - y0)
+			if (outcodeOut & TOP) {           // point is above the clip rectangle
+				x = x0 + (x1 - x0) * (YMAX - y0) / (y1 - y0);
+				y = YMAX;
+			} else if (outcodeOut & BOTTOM) { // point is below the clip rectangle
+				x = x0 + (x1 - x0) * (YMIN - y0) / (y1 - y0);
+				y = YMIN;
+			} else if (outcodeOut & RIGHT) {  // point is to the right of clip rectangle
+				y = y0 + (y1 - y0) * (XMAX - x0) / (x1 - x0);
+				x = XMAX;
+			} else if (outcodeOut & LEFT) {   // point is to the left of clip rectangle
+				y = y0 + (y1 - y0) * (XMIN - x0) / (x1 - x0);
+				x = XMIN;
+			}
+ 
+			// Now we move outside point to intersection point to clip
+			// and get ready for next pass.
+			if (outcodeOut == outcode0) {
+				x0 = x;
+				y0 = y;
+				outcode0 = computeOutCode(x0, y0);
+			} else {
+				x1 = x;
+				y1 = y;
+				outcode1 = computeOutCode(x1, y1);
+			}
+		}
+	}
+
+	if (accept) {
+		drawLine(x0, y0, x1, y1, image, zoom, add);
+	}
 }
 
 void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *startbuf, unsigned char *endbuf, int step, unsigned char *image, int debug) {
@@ -243,7 +318,7 @@ void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *start
 			fprintf(stderr, "%d,%d %d,%d\n", x1, y1, x2, y2);
 		}
 
-		drawLine(x1, y1, x2, y2, image, z, bright);
+		drawClip(x1, y1, x2, y2, image, z, bright);
 	}
 
 	munmap(map, st.st_size);
@@ -307,7 +382,8 @@ int main(int argc, char **argv) {
 
 	int ox = x, oy = y;
 
-	for (zoom = z - 1; zoom >= z - 8 && zoom >= 0; zoom--) {
+	for (zoom = z - 1; zoom >= 0; zoom--) {
+	// for (zoom = z - 1; zoom >= z - 8 && zoom >= 0; zoom--) {
 		x /= 2;
 		y /= 2;
 
