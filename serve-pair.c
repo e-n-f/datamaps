@@ -277,6 +277,10 @@ void antialiasedLine(double x0, double y0, double x1, double y1, unsigned char *
 	}
 
 	// now there are only whole pixels along the path
+
+	// the middle of each whole pixel is halfway through a step
+	y0 += .5 * gradient;
+
 	for (; x0 < x1; x0++) {
 		if (steep) {
 			plot(y0,     x0, rfpart(y0), image, add);
