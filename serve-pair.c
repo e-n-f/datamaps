@@ -109,6 +109,60 @@ void quad2xy(unsigned long long quad, int *ox, int *oy, int z, int x, int y) {
 	*oy = wy >> (32 - z - 8);
 }
 
+void quad2fxy(unsigned long long quad, double *ox, double *oy, int z, int x, int y) {
+	long long wx = 0, wy = 0;
+	int i;
+
+	// first decode into world coordinates
+
+        for (i = 0; i < 32; i++) {
+                wx |= ((quad >> (i * 2)) & 1) << i;
+                wy |= ((quad >> (i * 2 + 1)) & 1) << i;
+        }
+
+	// then offset origin
+
+	wx -= (long long) x << (32 - z);
+	wy -= (long long) y << (32 - z);
+
+	// then scale. requires sign-extending shift
+
+	*ox = (double) wx / (1 << (32 - z - 8));
+	*oy = (double) wy / (1 << (32 - z - 8));
+}
+
+void putPixel(int x0, int y0, unsigned char *image, int add) {
+	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
+		int rem = 0;
+
+		int bright = image[4 * (y0 * 256 + x0) + 1];
+		if (bright == 0) {
+			bright = 72;
+		}
+		bright += add;
+		if (bright > 255) {
+			rem = (bright - 255) / 8;
+			bright = 255;
+		}
+		image[4 * (y0 * 256 + x0) + 1] = bright;
+
+		if (image[4 * (y0 * 256 + x0) + 0] == 0) {
+			image[4 * (y0 * 256 + x0) + 0] = 64;
+			image[4 * (y0 * 256 + x0) + 2] = 64;
+		} else {
+			rem += image[4 * (y0 * 256 + x0) + 0];
+
+			if (rem > 255) {
+				rem = 255;
+			}
+			image[4 * (y0 * 256 + x0) + 0] = rem;
+			image[4 * (y0 * 256 + x0) + 2] = rem;
+		}
+
+		image[4 * (y0 * 256 + x0) + 3] = 255;
+	}
+}
+
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
 void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, int add) {
         int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
@@ -124,36 +178,7 @@ void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, in
 			break;
 		}
 
-		if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
-			int rem = 0;
-
-			int bright = image[4 * (y0 * 256 + x0) + 1];
-			if (bright == 0) {
-				bright = 72;
-			}
-			bright += add;
-			if (bright > 255) {
-				rem = (bright - 255) / 8;
-				bright = 255;
-			}
-			image[4 * (y0 * 256 + x0) + 1] = bright;
-
-			if (image[4 * (y0 * 256 + x0) + 0] == 0) {
-				image[4 * (y0 * 256 + x0) + 0] = 64;
-				image[4 * (y0 * 256 + x0) + 2] = 64;
-			} else {
-				rem += image[4 * (y0 * 256 + x0) + 0];
-
-				if (rem > 255) {
-					rem = 255;
-				}
-				image[4 * (y0 * 256 + x0) + 0] = rem;
-				image[4 * (y0 * 256 + x0) + 2] = rem;
-			}
-
-
-			image[4 * (y0 * 256 + x0) + 3] = 255;
-		}
+		putPixel(x0, y0, image, add);
 
                 e2 = err;
                 if (e2 > -dx) { 
@@ -165,6 +190,105 @@ void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, in
 			y0 += sy;
 		}
         }
+}
+
+void plot(int x0, int y0, double c, unsigned char *image, int add) {
+	putPixel(x0, y0, image, add * c);
+}
+
+double fpart(double x) {
+	return x - floor(x);
+}
+
+double rfpart(double x) {
+	return 1 - fpart(x);
+}
+
+// loosely based on
+// http://en.wikipedia.org/wiki/Xiaolin_Wu's_line_algorithm
+void antialiasedLine(double x0, double y0, double x1, double y1, unsigned char *image, int zoom, int add) {
+	int steep = fabs(y1 - y0) > fabs(x1 - x0);
+
+	if (steep) {
+		double tmp = x0;
+		x0 = y0;
+		y0 = tmp;
+
+		tmp = x1;
+		x1 = y1;
+		y1 = tmp;
+	}
+
+	if (x0 > x1) {
+		double tmp = x0;
+		x0 = x1;
+		x1 = tmp;
+
+		tmp = y0;
+		y0 = y1;
+		y1 = tmp;
+	}
+
+	double dx = x1 - x0;
+	double dy = y1 - y0;
+	double gradient = dy / dx;
+
+	// start and end of line are inside the same pixel.
+	if (floor(x0) == floor(x1)) {
+		y0 = (y0 + y1) / 2;
+
+		if (steep) {
+			plot(y0,     x0, dx * rfpart(y0), image, add);
+			plot(y0 + 1, x0, dx *  fpart(y0), image, add);
+		} else {
+			plot(x0, y0,     dx * rfpart(y0), image, add);
+			plot(x0, y0 + 1, dx *  fpart(y0), image, add);
+		}
+
+		return;
+	}
+
+	// there is a fractional pixel at the start
+	if (x0 != floor(x0)) {
+		if (steep) {
+			plot(y0,     x0, rfpart(x0) * rfpart(y0), image, add);
+			plot(y0 + 1, x0, rfpart(x0) *  fpart(y0), image, add);
+		} else {
+			plot(x0, y0,     rfpart(x0) * rfpart(y0), image, add);
+			plot(x0, y0 + 1, rfpart(x0) *  fpart(y0), image, add);
+		}
+
+		y0 += gradient * rfpart(x0);
+		x0 = ceil(x0);
+	}
+
+	// there is a fractional pixel at the end
+	if (x1 != floor(x1)) {
+		if (steep) {
+			plot(y1,     x1, fpart(x1) * rfpart(y1), image, add);
+			plot(y1 + 1, x1, fpart(x1) *  fpart(y1), image, add);
+		} else {
+			plot(x1, y1,     fpart(x1) * rfpart(y1), image, add);
+			plot(x1, y1 + 1, fpart(x1) *  fpart(y1), image, add);
+		}
+
+		y1 -= gradient * fpart(x1);
+		x1 = floor(x1);
+	}
+
+	// now there are only whole pixels along the path
+	for (; x0 < x1; x0++) {
+		if (steep) {
+			plot(y0,     x0, rfpart(y0), image, add);
+			plot(y0 + 1, x0,  fpart(y0), image, add);
+
+		} else {
+			plot(x0, y0,     rfpart(y0), image, add);
+			plot(x0, y0 + 1,  fpart(y0), image, add);
+		}
+
+		y0 += gradient;
+	}
 }
 
 #define INSIDE 0
@@ -257,7 +381,7 @@ void drawClip(double x0, double y0, double x1, double y1, unsigned char *image, 
 	}
 
 	if (accept) {
-		drawLine(x0, y0, x1, y1, image, zoom, add);
+		antialiasedLine(x0, y0, x1, y1, image, zoom, add);
 	}
 }
 
@@ -301,22 +425,18 @@ void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *start
 	fprintf(stderr, "size: %u  %d %d %d\n", count, zoom, x, y);
 
 	// no real rationale for exponent -- chosen by experiment
-	int bright = exp(log(1.53) * z);
+	int bright = exp(log(1.53) * z) * 2.3;
 
 	unsigned int j;
 	for (j = 0; j < count; j += step) {
 		unsigned long long quad1 = buf2quad(start + j * BYTES);
 		unsigned long long quad2 = buf2quad(start + j * BYTES + BYTES / 2);
 
-		int x1, y1;
-		int x2, y2;
+		double x1, y1;
+		double x2, y2;
 
-		quad2xy(quad1, &x1, &y1, z, ox, oy);
-		quad2xy(quad2, &x2, &y2, z, ox, oy);
-
-		if (debug) {
-			fprintf(stderr, "%d,%d %d,%d\n", x1, y1, x2, y2);
-		}
+		quad2fxy(quad1, &x1, &y1, z, ox, oy);
+		quad2fxy(quad2, &x2, &y2, z, ox, oy);
 
 		drawClip(x1, y1, x2, y2, image, z, bright);
 	}
