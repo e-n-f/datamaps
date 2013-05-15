@@ -131,40 +131,14 @@ void quad2fxy(unsigned long long quad, double *ox, double *oy, int z, int x, int
 	*oy = (double) wy / (1 << (32 - z - 8));
 }
 
-void putPixel(int x0, int y0, unsigned char *image, int add) {
+void putPixel(int x0, int y0, double *image, double add) {
 	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
-		int rem = 0;
-
-		int bright = image[4 * (y0 * 256 + x0) + 1];
-		if (bright == 0) {
-			bright = 72;
-		}
-		bright += add;
-		if (bright > 255) {
-			rem = (bright - 255) / 8;
-			bright = 255;
-		}
-		image[4 * (y0 * 256 + x0) + 1] = bright;
-
-		if (image[4 * (y0 * 256 + x0) + 0] == 0) {
-			image[4 * (y0 * 256 + x0) + 0] = 64;
-			image[4 * (y0 * 256 + x0) + 2] = 64;
-		} else {
-			rem += image[4 * (y0 * 256 + x0) + 0];
-
-			if (rem > 255) {
-				rem = 255;
-			}
-			image[4 * (y0 * 256 + x0) + 0] = rem;
-			image[4 * (y0 * 256 + x0) + 2] = rem;
-		}
-
-		image[4 * (y0 * 256 + x0) + 3] = 255;
+		image[y0 * 256 + x0] += add;
 	}
 }
 
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
-void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, int add) {
+void drawLine(int x0, int y0, int x1, int y1, double *image, int zoom, double add) {
         int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
         int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
         int err = ((dx > dy) ? dx : -dy) / 2, e2;
@@ -192,7 +166,7 @@ void drawLine(int x0, int y0, int x1, int y1, unsigned char *image, int zoom, in
         }
 }
 
-void plot(int x0, int y0, double c, unsigned char *image, int add) {
+void plot(int x0, int y0, double c, double *image, double add) {
 	putPixel(x0, y0, image, add * c);
 }
 
@@ -206,7 +180,7 @@ double rfpart(double x) {
 
 // loosely based on
 // http://en.wikipedia.org/wiki/Xiaolin_Wu's_line_algorithm
-void antialiasedLine(double x0, double y0, double x1, double y1, unsigned char *image, int zoom, int add) {
+void antialiasedLine(double x0, double y0, double x1, double y1, double *image, int zoom, double add) {
 	int steep = fabs(y1 - y0) > fabs(x1 - x0);
 
 	if (steep) {
@@ -331,12 +305,12 @@ int computeOutCode(double x, double y) {
 }
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
-void drawClip(double x0, double y0, double x1, double y1, unsigned char *image, int zoom, int add) {
+void drawClip(double x0, double y0, double x1, double y1, double *image, int zoom, double add) {
         double dx = fabs(x1 - x0);
         double dy = fabs(y1 - y0);
 	add /= sqrt(dx * dx + dy * dy);
 
-	if (add < 1) {
+	if (add < 5) {
 		return;
 	}
 
@@ -393,7 +367,7 @@ void drawClip(double x0, double y0, double x1, double y1, unsigned char *image, 
 	}
 }
 
-void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *startbuf, unsigned char *endbuf, int step, unsigned char *image, int debug) {
+void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *startbuf, unsigned char *endbuf, int step, double *image, int debug) {
 	char fname[strlen(FNAME) + 3 + 5 + 1];
 	sprintf(fname, "%s/%d.sort", FNAME, zoom);
 
@@ -454,6 +428,8 @@ void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *start
 }
 
 int main(int argc, char **argv) {
+	int i;
+
 	if (argc < 4) {
 		fprintf(stderr, "Usage: %s zoom x y\n", argv[0]);
 		exit(EXIT_FAILURE);
@@ -463,27 +439,8 @@ int main(int argc, char **argv) {
 	unsigned int x = atoi(argv[2]);
 	unsigned int y = atoi(argv[3]);
 
-	unsigned char image[256 * 256 * 4];
-	memset(image, 0, 256 * 256 * 4);
-
-	int i;
-	for (i = 0; i < 256 * 256; i++) {
-		image[4 * i + 3] = 192;
-	}
-
-	int step;
-	int dup;
-#define ALL 13
-
-	if (z >= ALL) {
-		step = 1;
-		dup = 1 << (z - ALL);
-	} else {
-		step = 1 << (ALL - z);
-		dup = 1;
-	}
-
-	step = 1; // XXX
+	double image[256 * 256];
+	memset(image, 0, sizeof(image));
 
 	unsigned long long startquad = 0;
 
@@ -505,7 +462,7 @@ int main(int argc, char **argv) {
 
 	int zoom;
 	for (zoom = z; zoom < z + 8 && zoom < 24; zoom++) {
-		process(zoom, x, y, z, x, y, startbuf, endbuf, step, image, 0);
+		process(zoom, x, y, z, x, y, startbuf, endbuf, 1, image, 0);
 	}
 
 	int ox = x, oy = y;
@@ -540,6 +497,38 @@ int main(int argc, char **argv) {
 		process(zoom, x, y, z, ox, oy, startbuf, endbuf, 1, image, 0);
 	}
 
-	out(image, 256, 256);
+double limit = 400;
+double limit2 = 2000;
+#define OPACITY 224
+
+	unsigned char img2[256 * 256 * 4];
+	for (i = 0; i < 256 * 256; i++) {
+		if (image[i] == 0) {
+			img2[4 * i + 0] = 0;
+			img2[4 * i + 1] = 0;
+			img2[4 * i + 2] = 0;
+			img2[4 * i + 3] = OPACITY;
+		} else {
+			if (image[i] <= limit) {
+				img2[4 * i + 0] = 0;
+				img2[4 * i + 1] = 255 * (image[i] / limit);
+				img2[4 * i + 2] = 0;
+				img2[4 * i + 3] = 255 * (image[i] / limit) +
+						  OPACITY * (1 - (image[i] / limit));
+			} else if (image[i] <= limit2) {
+				img2[4 * i + 0] = 255 * (image[i] - limit) / (limit2 - limit);
+				img2[4 * i + 1] = 255;
+				img2[4 * i + 2] = 255 * (image[i] - limit) / (limit2 - limit);
+				img2[4 * i + 3] = 255;
+			} else {
+				img2[4 * i + 0] = 255;
+				img2[4 * i + 1] = 255;
+				img2[4 * i + 2] = 255;
+				img2[4 * i + 3] = 255;
+			}
+		}
+	}
+
+	out(img2, 256, 256);
 	return 0;
 }
