@@ -461,7 +461,7 @@ int main(int argc, char **argv) {
 	quad2buf(endquad, endbuf);
 
 	int zoom;
-	for (zoom = z; zoom < z + 8 && zoom < 24; zoom++) {
+	for (zoom = z; zoom < z + 9 && zoom < 24; zoom++) {
 		process(zoom, x, y, z, x, y, startbuf, endbuf, 1, image, 0);
 	}
 
