@@ -224,14 +224,14 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 
 	// there is a fractional pixel at the start
 	if (x0 != floor(x0)) {
-		double s = .5 * rfpart(x0) * gradient;
+		double yy = y0 + .5 * rfpart(x0) * gradient;
 
 		if (steep) {
-			plot(y0 + s,     x0, rfpart(x0) * rfpart(y0), image, add);
-			plot(y0 + s + 1, x0, rfpart(x0) *  fpart(y0), image, add);
+			plot(yy,     x0, rfpart(x0) * rfpart(yy), image, add);
+			plot(yy + 1, x0, rfpart(x0) *  fpart(yy), image, add);
 		} else {
-			plot(x0, y0 + s,     rfpart(x0) * rfpart(y0), image, add);
-			plot(x0, y0 + s + 1, rfpart(x0) *  fpart(y0), image, add);
+			plot(x0, yy,     rfpart(x0) * rfpart(yy), image, add);
+			plot(x0, yy + 1, rfpart(x0) *  fpart(yy), image, add);
 		}
 
 		y0 += gradient * rfpart(x0);
@@ -240,14 +240,14 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 
 	// there is a fractional pixel at the end
 	if (x1 != floor(x1)) {
-		double s = .5 * fpart(x1) * gradient;
+		double yy = y1 - .5 * fpart(x1) * gradient;
 
 		if (steep) {
-			plot(y1 - s,     x1, fpart(x1) * rfpart(y1), image, add);
-			plot(y1 - s + 1, x1, fpart(x1) *  fpart(y1), image, add);
+			plot(yy,     x1, fpart(x1) * rfpart(yy), image, add);
+			plot(yy + 1, x1, fpart(x1) *  fpart(yy), image, add);
 		} else {
-			plot(x1, y1 - s,     fpart(x1) * rfpart(y1), image, add);
-			plot(x1, y1 - s + 1, fpart(x1) *  fpart(y1), image, add);
+			plot(x1, yy,     fpart(x1) * rfpart(yy), image, add);
+			plot(x1, yy + 1, fpart(x1) *  fpart(yy), image, add);
 		}
 
 		y1 -= gradient * fpart(x1);
