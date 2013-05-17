@@ -87,28 +87,6 @@ void quad2buf(unsigned long long quad, unsigned char *buf) {
 	}
 }
 
-void quad2xy(unsigned long long quad, int *ox, int *oy, int z, int x, int y) {
-	long long wx = 0, wy = 0;
-	int i;
-
-	// first decode into world coordinates
-
-        for (i = 0; i < 32; i++) {
-                wx |= ((quad >> (i * 2)) & 1) << i;
-                wy |= ((quad >> (i * 2 + 1)) & 1) << i;
-        }
-
-	// then offset origin
-
-	wx -= (long long) x << (32 - z);
-	wy -= (long long) y << (32 - z);
-
-	// then scale. requires sign-extending shift
-
-	*ox = wx >> (32 - z - 8);
-	*oy = wy >> (32 - z - 8);
-}
-
 void quad2fxy(unsigned long long quad, double *ox, double *oy, int z, int x, int y) {
 	long long wx = 0, wy = 0;
 	int i;
@@ -125,7 +103,7 @@ void quad2fxy(unsigned long long quad, double *ox, double *oy, int z, int x, int
 	wx -= (long long) x << (32 - z);
 	wy -= (long long) y << (32 - z);
 
-	// then scale. requires sign-extending shift
+	// then scale
 
 	*ox = (double) wx / (1 << (32 - z - 8));
 	*oy = (double) wy / (1 << (32 - z - 8));
@@ -422,6 +400,25 @@ void process(int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z
 	close(fd);
 }
 
+void zxy2bufs(unsigned int z, unsigned int x, unsigned int y, unsigned char *startbuf, unsigned char *endbuf) {
+	unsigned long long startquad = 0;
+	int i;
+
+	for (i = 0; i < z; i++) {
+		startquad |= ((x >> i) & 1LL) << (2 * (i + (32 - z)));
+		startquad |= ((y >> i) & 1LL) << (2 * (i + (32 - z)) + 1);
+	}
+
+	unsigned long long endquad = startquad;
+
+	for (i = 0; i < 32 - z; i++) {
+		endquad |= 3LL << (2 * i);
+	}
+
+	quad2buf(startquad, startbuf);
+	quad2buf(endquad, endbuf);
+}
+
 int main(int argc, char **argv) {
 	int i;
 
@@ -437,58 +434,27 @@ int main(int argc, char **argv) {
 	double image[256 * 256];
 	memset(image, 0, sizeof(image));
 
-	unsigned long long startquad = 0;
-
-	for (i = 0; i < z_draw; i++) {
-		startquad |= ((x_draw >> i) & 1LL) << (2 * (i + (32 - z_draw)));
-		startquad |= ((y_draw >> i) & 1LL) << (2 * (i + (32 - z_draw)) + 1);
-	}
-
-	unsigned long long endquad = startquad;
-
-	for (i = 0; i < 32 - z_draw; i++) {
-		endquad |= 3LL << (2 * i);
-	}
+	// For zoom levels smaller than this one, we look up the entire area
+	// of the tile we are drawing, which will end up being multiple tiles
+	// of the higher zoom.
 
 	unsigned char startbuf[BYTES];
 	unsigned char endbuf[BYTES];
-	quad2buf(startquad, startbuf);
-	quad2buf(endquad, endbuf);
+	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf);
 
 	int z_lookup;
-
-	for (z_lookup = z_draw; z_lookup < z_draw + 9 && z_lookup < 24; z_lookup++) {
+	for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < 24; z_lookup++) {
 		process(z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image);
 	}
 
-	int x_lookup = x_draw, y_lookup = y_draw;
+	// For zoom levels larger than this one, each stage looks up a
+	// larger area for potential overlaps.
 
-	for (z_lookup = z_draw - 1; z_lookup >= 0; z_lookup--) {
-		x_lookup /= 2;
-		y_lookup /= 2;
-
-		fprintf(stderr, "looking at %d %d %d\n", z_lookup, x_lookup, y_lookup);
-
-		startquad = 0;
-
-		for (i = 0; i < z_lookup; i++) {
-			startquad |= ((x_lookup >> i) & 1LL) << (2 * (i + (32 - z_lookup)));
-			startquad |= ((y_lookup >> i) & 1LL) << (2 * (i + (32 - z_lookup)) + 1);
-		}
-
-		endquad = startquad;
-
-		for (i = 0; i < 32 - z_lookup; i++) {
-			endquad |= 3LL << (2 * i);
-		}
-
-		fprintf(stderr, "that's %llx to %llx\n", startquad, endquad);
-
-		unsigned char startbuf[BYTES];
-		unsigned char endbuf[BYTES];
-		quad2buf(startquad, startbuf);
-		quad2buf(endquad, endbuf);
-
+	int x_lookup, y_lookup;
+	for (z_lookup = z_draw, x_lookup = x_draw, y_lookup = y_draw;
+	     z_lookup >= 0;
+	     z_lookup--, x_lookup /= 2, y_lookup /= 2) {
+		zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf);
 		process(z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image);
 	}
 
