@@ -143,10 +143,6 @@ void drawLine(int x0, int y0, int x1, int y1, double *image, double add) {
         int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
         int err = ((dx > dy) ? dx : -dy) / 2, e2;
 
-	// int add = 256 / sqrt(dx * dx + dy * dy);
-	// int add = exp(log(1.5) * zoom) / sqrt(dx * dx + dy * dy);
-	// int add = brightness[zoom] / sqrt(dx * dx + dy * dy);
-
 	while (1) {
                 if (x0 == x1 && y0 == y1) {
 			break;
@@ -367,9 +363,9 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, double 
 	}
 }
 
-void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *startbuf, unsigned char *endbuf, double *image) {
+void process(int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image) {
 	char fname[strlen(FNAME) + 3 + 5 + 1];
-	sprintf(fname, "%s/%d.sort", FNAME, zoom);
+	sprintf(fname, "%s/%d.sort", FNAME, z_lookup);
 
 	int fd = open(fname, O_RDONLY);
 	if (fd < 0) {
@@ -404,10 +400,9 @@ void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *start
 	}
 
 	unsigned count = (end - start) / BYTES;
-	fprintf(stderr, "size: %u  %d %d %d\n", count, zoom, x, y);
 
 	// no real rationale for exponent -- chosen by experiment
-	int bright = exp(log(1.53) * z) * 2.3;
+	int bright = exp(log(1.53) * z_draw) * 2.3;
 
 	unsigned int j;
 	for (j = 0; j < count; j += 1) {
@@ -417,8 +412,8 @@ void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *start
 		double x1, y1;
 		double x2, y2;
 
-		quad2fxy(quad1, &x1, &y1, z, ox, oy);
-		quad2fxy(quad2, &x2, &y2, z, ox, oy);
+		quad2fxy(quad1, &x1, &y1, z_draw, x_draw, y_draw);
+		quad2fxy(quad2, &x2, &y2, z_draw, x_draw, y_draw);
 
 		drawClip(x1, y1, x2, y2, image, bright);
 	}
@@ -431,27 +426,27 @@ int main(int argc, char **argv) {
 	int i;
 
 	if (argc < 4) {
-		fprintf(stderr, "Usage: %s zoom x y\n", argv[0]);
+		fprintf(stderr, "Usage: %s z x y\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
-	unsigned int z = atoi(argv[1]);
-	unsigned int x = atoi(argv[2]);
-	unsigned int y = atoi(argv[3]);
+	unsigned int z_draw = atoi(argv[1]);
+	unsigned int x_draw = atoi(argv[2]);
+	unsigned int y_draw = atoi(argv[3]);
 
 	double image[256 * 256];
 	memset(image, 0, sizeof(image));
 
 	unsigned long long startquad = 0;
 
-	for (i = 0; i < z; i++) {
-		startquad |= ((x >> i) & 1LL) << (2 * (i + (32 - z)));
-		startquad |= ((y >> i) & 1LL) << (2 * (i + (32 - z)) + 1);
+	for (i = 0; i < z_draw; i++) {
+		startquad |= ((x_draw >> i) & 1LL) << (2 * (i + (32 - z_draw)));
+		startquad |= ((y_draw >> i) & 1LL) << (2 * (i + (32 - z_draw)) + 1);
 	}
 
 	unsigned long long endquad = startquad;
 
-	for (i = 0; i < 32 - z; i++) {
+	for (i = 0; i < 32 - z_draw; i++) {
 		endquad |= 3LL << (2 * i);
 	}
 
@@ -460,30 +455,30 @@ int main(int argc, char **argv) {
 	quad2buf(startquad, startbuf);
 	quad2buf(endquad, endbuf);
 
-	int zoom;
-	for (zoom = z; zoom < z + 9 && zoom < 24; zoom++) {
-		process(zoom, x, y, z, x, y, startbuf, endbuf, image);
+	int z_lookup;
+
+	for (z_lookup = z_draw; z_lookup < z_draw + 9 && z_lookup < 24; z_lookup++) {
+		process(z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image);
 	}
 
-	int ox = x, oy = y;
+	int x_lookup = x_draw, y_lookup = y_draw;
 
-	for (zoom = z - 1; zoom >= 0; zoom--) {
-	// for (zoom = z - 1; zoom >= z - 8 && zoom >= 0; zoom--) {
-		x /= 2;
-		y /= 2;
+	for (z_lookup = z_draw - 1; z_lookup >= 0; z_lookup--) {
+		x_lookup /= 2;
+		y_lookup /= 2;
 
-		fprintf(stderr, "looking at %d %d %d\n", zoom, x, y);
+		fprintf(stderr, "looking at %d %d %d\n", z_lookup, x_lookup, y_lookup);
 
 		startquad = 0;
 
-		for (i = 0; i < zoom; i++) {
-			startquad |= ((x >> i) & 1LL) << (2 * (i + (32 - zoom)));
-			startquad |= ((y >> i) & 1LL) << (2 * (i + (32 - zoom)) + 1);
+		for (i = 0; i < z_lookup; i++) {
+			startquad |= ((x_lookup >> i) & 1LL) << (2 * (i + (32 - z_lookup)));
+			startquad |= ((y_lookup >> i) & 1LL) << (2 * (i + (32 - z_lookup)) + 1);
 		}
 
 		endquad = startquad;
 
-		for (i = 0; i < 32 - zoom; i++) {
+		for (i = 0; i < 32 - z_lookup; i++) {
 			endquad |= 3LL << (2 * i);
 		}
 
@@ -494,7 +489,7 @@ int main(int argc, char **argv) {
 		quad2buf(startquad, startbuf);
 		quad2buf(endquad, endbuf);
 
-		process(zoom, x, y, z, ox, oy, startbuf, endbuf, image);
+		process(z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image);
 	}
 
 double limit = 400;
