@@ -138,7 +138,7 @@ void putPixel(int x0, int y0, double *image, double add) {
 }
 
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
-void drawLine(int x0, int y0, int x1, int y1, double *image, int zoom, double add) {
+void drawLine(int x0, int y0, int x1, int y1, double *image, double add) {
         int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
         int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
         int err = ((dx > dy) ? dx : -dy) / 2, e2;
@@ -180,7 +180,7 @@ double rfpart(double x) {
 
 // loosely based on
 // http://en.wikipedia.org/wiki/Xiaolin_Wu's_line_algorithm
-void antialiasedLine(double x0, double y0, double x1, double y1, double *image, int zoom, double add) {
+void antialiasedLine(double x0, double y0, double x1, double y1, double *image, double add) {
 	int steep = fabs(y1 - y0) > fabs(x1 - x0);
 
 	if (steep) {
@@ -305,7 +305,7 @@ int computeOutCode(double x, double y) {
 }
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
-void drawClip(double x0, double y0, double x1, double y1, double *image, int zoom, double add) {
+void drawClip(double x0, double y0, double x1, double y1, double *image, double add) {
         double dx = fabs(x1 - x0);
         double dy = fabs(y1 - y0);
 	add /= sqrt(dx * dx + dy * dy);
@@ -363,11 +363,11 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, int zoo
 	}
 
 	if (accept) {
-		antialiasedLine(x0, y0, x1, y1, image, zoom, add);
+		antialiasedLine(x0, y0, x1, y1, image, add);
 	}
 }
 
-void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *startbuf, unsigned char *endbuf, int step, double *image, int debug) {
+void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *startbuf, unsigned char *endbuf, double *image) {
 	char fname[strlen(FNAME) + 3 + 5 + 1];
 	sprintf(fname, "%s/%d.sort", FNAME, zoom);
 
@@ -410,7 +410,7 @@ void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *start
 	int bright = exp(log(1.53) * z) * 2.3;
 
 	unsigned int j;
-	for (j = 0; j < count; j += step) {
+	for (j = 0; j < count; j += 1) {
 		unsigned long long quad1 = buf2quad(start + j * BYTES);
 		unsigned long long quad2 = buf2quad(start + j * BYTES + BYTES / 2);
 
@@ -420,7 +420,7 @@ void process(int zoom, int x, int y, int z, int ox, int oy, unsigned char *start
 		quad2fxy(quad1, &x1, &y1, z, ox, oy);
 		quad2fxy(quad2, &x2, &y2, z, ox, oy);
 
-		drawClip(x1, y1, x2, y2, image, z, bright);
+		drawClip(x1, y1, x2, y2, image, bright);
 	}
 
 	munmap(map, st.st_size);
@@ -462,7 +462,7 @@ int main(int argc, char **argv) {
 
 	int zoom;
 	for (zoom = z; zoom < z + 9 && zoom < 24; zoom++) {
-		process(zoom, x, y, z, x, y, startbuf, endbuf, 1, image, 0);
+		process(zoom, x, y, z, x, y, startbuf, endbuf, image);
 	}
 
 	int ox = x, oy = y;
@@ -494,7 +494,7 @@ int main(int argc, char **argv) {
 		quad2buf(startquad, startbuf);
 		quad2buf(endquad, endbuf);
 
-		process(zoom, x, y, z, ox, oy, startbuf, endbuf, 1, image, 0);
+		process(zoom, x, y, z, ox, oy, startbuf, endbuf, image);
 	}
 
 double limit = 400;
