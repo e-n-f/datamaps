@@ -7,6 +7,8 @@
 int mapbits = 2 * (16 + 8); // zoom level 16
 int metabits = 0;
 
+#define MAX_INPUT 2000
+
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int *y) {
 	double lat_rad = lat * M_PI / 180;
@@ -125,13 +127,13 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	char s[2000];
-	double lat[2000], lon[2000];
-	int metasize[2000];
-	long long meta[2000];
-	unsigned int x[2000], y[2000];
+	char s[MAX_INPUT];
+	double lat[MAX_INPUT], lon[MAX_INPUT];
+	int metasize[MAX_INPUT];
+	long long meta[MAX_INPUT];
+	unsigned int x[MAX_INPUT], y[MAX_INPUT];
 
-	while (fgets(s, 2000, stdin)) {
+	while (fgets(s, MAX_INPUT, stdin)) {
 		char *cp = s;
 		int n = 0, m = 0;
 
