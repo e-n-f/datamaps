@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <fcntl.h>
 
 int mapbits = 2 * (16 + 8); // zoom level 16
 int metabits = 0;
@@ -99,16 +102,22 @@ void usage(char *name) {
 		name);
 }
 
-void read_file(FILE *f, char *destdir, struct file **files) {
+void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 	char s[MAX_INPUT];
 	double lat[MAX_INPUT], lon[MAX_INPUT];
 	int metasize[MAX_INPUT];
 	long long meta[MAX_INPUT];
 	unsigned int x[MAX_INPUT], y[MAX_INPUT];
+	unsigned long long seq = 0;
 
 	while (fgets(s, MAX_INPUT, f)) {
 		char *cp = s;
 		int n = 0, m = 0;
+
+		if (seq % 100000 == 0) {
+			fprintf(stderr, "Read %lld records\r", seq);
+		}
+		seq++;
 
 		while (1) {
 			if (sscanf(cp, "%lf,%lf", &lat[n], &lon[n]) == 2) {
@@ -163,6 +172,10 @@ void read_file(FILE *f, char *destdir, struct file **files) {
 			}
 		}
 
+		if (n > *maxn) {
+			*maxn = n;
+		}
+
 		int bits = mapbits + metabits;
 		for (i = 1; i < n; i++) {
 			bits += mapbits - 2 * common;
@@ -215,6 +228,11 @@ void read_file(FILE *f, char *destdir, struct file **files) {
 	}
 }
 
+static int gSortBytes;
+int bufcmp(const void *v1, const void *v2) {
+	return memcmp(v1, v2, gSortBytes);
+}
+
 int main(int argc, char **argv) {
 	int i;
 	extern int optind;
@@ -258,21 +276,11 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	char s[strlen(destdir) + 5 + 1];
-	sprintf(s, "%s/meta", destdir);
-	FILE *f = fopen(s, "w");
-	if (f == NULL) {
-		perror(s);
-		exit(EXIT_FAILURE);
-	}
-	fprintf(f, "1\n");
-	fprintf(f, "%d %d\n", mapbits, metabits);
-	fclose(f);
-
 	struct file *files = NULL;
+	int maxn = 0;
 
 	if (optind == argc) {
-		read_file(stdin, destdir, &files);
+		read_file(stdin, destdir, &files, &maxn);
 	} else {
 		for (i = optind; i < argc; i++) {
 			FILE *f = fopen(argv[i], "r");
@@ -281,9 +289,84 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			read_file(f, destdir, &files);
+			read_file(f, destdir, &files, &maxn);
 			fclose(f);
 		}
+	}
+
+	char s[strlen(destdir) + 5 + 1];
+	sprintf(s, "%s/meta", destdir);
+	FILE *f = fopen(s, "w");
+	if (f == NULL) {
+		perror(s);
+		exit(EXIT_FAILURE);
+	}
+	fprintf(f, "1\n");
+	fprintf(f, "%d %d %d\n", mapbits, metabits, maxn);
+	fclose(f);
+
+	for (; files != NULL; files = files->next) {
+		fprintf(stderr, "Sorting for %d points, zoom level %d\n",
+			files->legs, files->level);
+
+		fclose(files->f);
+
+		char fn[strlen(destdir) + 10 + 1 + 10 + 1];
+		sprintf(fn, "%s/%d,%d", destdir, files->legs, files->level);
+
+		int fd = open(fn, O_RDONLY);
+		if (fd < 0) {
+			perror(fn);
+			exit(EXIT_FAILURE);
+		}
+
+		struct stat st;
+		if (fstat(fd, &st) < 0) {
+			perror("stat");
+			exit(EXIT_FAILURE);
+		}
+
+		void *map = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+		if (map == MAP_FAILED) {
+			perror("mmap");
+			exit(EXIT_FAILURE);
+		}
+
+		int bits = mapbits + metabits;
+		for (i = 1; i < files->legs; i++) {
+			bits += mapbits - 2 * files->level;
+		}
+		int bytes = (bits + 7) / 8;
+		gSortBytes = bytes;
+
+		qsort(map, st.st_size / bytes, bytes, bufcmp);
+
+		if (unlink(fn) != 0) {
+			perror("unlink");
+			exit(EXIT_FAILURE);
+		}
+
+		int out = open(fn, O_RDWR | O_CREAT, 0666);
+		if (out < 0) {
+			perror(fn);
+			exit(EXIT_FAILURE);
+		}
+
+		size_t off = 0;
+		while (off < st.st_size) {
+			ssize_t written = write(out, map + off, st.st_size - off);
+
+			if (written < 0) {
+				perror("write");
+				exit(1);
+			}
+
+			off += written;
+		}
+
+		munmap(map, st.st_size);
+		close(fd);
+		close(out);
 	}
 
 	return 0;
