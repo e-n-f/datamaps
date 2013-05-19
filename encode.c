@@ -89,51 +89,14 @@ void usage(char *name) {
 		name);
 }
 
-int main(int argc, char **argv) {
-	int i;
-	extern int optind;
-	extern char *optarg;
-	char *destdir = NULL;
-
-	while ((i = getopt(argc, argv, "z:m:o:")) != -1) {
-		switch (i) {
-		case 'z':
-			mapbits = 2 * (atoi(optarg) + 8);
-			break;
-
-		case 'm':
-			metabits = atoi(optarg);
-			break;
-
-		case 'o':
-			destdir = optarg;
-			break;
-
-		default:
-			usage(argv[0]);
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	if (mapbits <= 8) {
-		fprintf(stderr, "%s: Zoom level (-z) must be > 0\n", argv[0]);
-		usage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
-
-	if (destdir == NULL) {
-		fprintf(stderr, "%s: Must specify a directory with -o\n", argv[0]);
-		usage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
-
+void read_file(FILE *f) {
 	char s[MAX_INPUT];
 	double lat[MAX_INPUT], lon[MAX_INPUT];
 	int metasize[MAX_INPUT];
 	long long meta[MAX_INPUT];
 	unsigned int x[MAX_INPUT], y[MAX_INPUT];
 
-	while (fgets(s, MAX_INPUT, stdin)) {
+	while (fgets(s, MAX_INPUT, f)) {
 		char *cp = s;
 		int n = 0, m = 0;
 
@@ -161,6 +124,7 @@ int main(int argc, char **argv) {
 
 		// Project each point to web mercator
 
+		int i;
 		for (i = 0; i < n; i++) {
 			latlon2tile(lat[i], lon[i], 32, &x[i], &y[i]);
 		}
@@ -226,8 +190,6 @@ int main(int argc, char **argv) {
 		}
 
 
-
-
 		for (i = 0; i < n; i++) {
 			x[i] = 0;
 			y[i] = 0;
@@ -241,6 +203,60 @@ int main(int argc, char **argv) {
 
 
 		printf("\n");
+	}
+}
+
+int main(int argc, char **argv) {
+	int i;
+	extern int optind;
+	extern char *optarg;
+	char *destdir = NULL;
+
+	while ((i = getopt(argc, argv, "z:m:o:")) != -1) {
+		switch (i) {
+		case 'z':
+			mapbits = 2 * (atoi(optarg) + 8);
+			break;
+
+		case 'm':
+			metabits = atoi(optarg);
+			break;
+
+		case 'o':
+			destdir = optarg;
+			break;
+
+		default:
+			usage(argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (mapbits <= 8) {
+		fprintf(stderr, "%s: Zoom level (-z) must be > 0\n", argv[0]);
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	if (destdir == NULL) {
+		fprintf(stderr, "%s: Must specify a directory with -o\n", argv[0]);
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	if (optind == argc) {
+		read_file(stdin);
+	} else {
+		for (i = optind; i < argc; i++) {
+			FILE *f = fopen(argv[i], "r");
+			if (f == NULL) {
+				perror(argv[i]);
+				exit(EXIT_FAILURE);
+			}
+
+			read_file(f);
+			fclose(f);
+		}
 	}
 
 	return 0;
