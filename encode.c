@@ -3,11 +3,21 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 int mapbits = 2 * (16 + 8); // zoom level 16
 int metabits = 0;
 
 #define MAX_INPUT 2000
+
+struct file {
+	int legs;
+	int level;
+	FILE *f;
+
+	struct file *next;
+};
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int *y) {
@@ -89,7 +99,7 @@ void usage(char *name) {
 		name);
 }
 
-void read_file(FILE *f) {
+void read_file(FILE *f, char *destdir, struct file **files) {
 	char s[MAX_INPUT];
 	double lat[MAX_INPUT], lon[MAX_INPUT];
 	int metasize[MAX_INPUT];
@@ -172,37 +182,36 @@ void read_file(FILE *f) {
 			meta2buf(metasize[i], meta[i], buf, &off, bits);
 		}
 
-		printf("%d  ", common);
+		struct file **fo;
 
-		for (i = 0; i < bytes; i++) {
-			printf("%02x ", buf[i]);
+		for (fo = files; *fo != NULL; fo = &((*fo)->next)) {
+			if ((*fo)->legs == n && (*fo)->level == common) {
+				break;
+			}
 		}
 
-		printf("   ");
+		if (*fo == NULL) {
+			*fo = malloc(sizeof(struct file));
 
-		for (i = 0; i < n; i++) {
-			printf("%u,%u ", x[i], y[i]);
+			if (*fo == NULL) {
+				perror("malloc");
+				exit(EXIT_FAILURE);
+			}
+
+			char fn[strlen(destdir) + 10 + 1 + 10 + 1];
+			sprintf(fn, "%s/%d,%d", destdir, n, common);
+
+			(*fo)->legs = n;
+			(*fo)->level = common;
+			(*fo)->f = fopen(fn, "w");
+
+			if ((*fo)->f == NULL) {
+				perror(fn);
+				exit(EXIT_FAILURE);
+			}
 		}
 
-
-		for (i = 0; i < n; i++) {
-			printf("%lf,%lf ", lat[i], lon[i]);
-		}
-
-
-		for (i = 0; i < n; i++) {
-			x[i] = 0;
-			y[i] = 0;
-		}
-
-		buf2xys(buf, mapbits, common, n, x, y);
-
-		for (i = 0; i < n; i++) {
-			printf("%u,%u ", x[i], y[i]);
-		}
-
-
-		printf("\n");
+		fwrite(buf, sizeof(char), bytes, (*fo)->f);
 	}
 }
 
@@ -244,8 +253,26 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	if (mkdir(destdir, 0777) != 0) {
+		perror(destdir);
+		exit(EXIT_FAILURE);
+	}
+
+	char s[strlen(destdir) + 5 + 1];
+	sprintf(s, "%s/meta", destdir);
+	FILE *f = fopen(s, "w");
+	if (f == NULL) {
+		perror(s);
+		exit(EXIT_FAILURE);
+	}
+	fprintf(f, "1\n");
+	fprintf(f, "%d %d\n", mapbits, metabits);
+	fclose(f);
+
+	struct file *files = NULL;
+
 	if (optind == argc) {
-		read_file(stdin);
+		read_file(stdin, destdir, &files);
 	} else {
 		for (i = optind; i < argc; i++) {
 			FILE *f = fopen(argv[i], "r");
@@ -254,7 +281,7 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			read_file(f);
+			read_file(f, destdir, &files);
 			fclose(f);
 		}
 	}
