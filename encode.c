@@ -306,9 +306,6 @@ int main(int argc, char **argv) {
 	fclose(f);
 
 	for (; files != NULL; files = files->next) {
-		fprintf(stderr, "Sorting for %d points, zoom level %d\n",
-			files->legs, files->level);
-
 		fclose(files->f);
 
 		char fn[strlen(destdir) + 10 + 1 + 10 + 1];
@@ -338,6 +335,11 @@ int main(int argc, char **argv) {
 		}
 		int bytes = (bits + 7) / 8;
 		gSortBytes = bytes;
+
+		fprintf(stderr,
+		 	"Sorting %lld shapes of %d point(s), zoom level %d\n",
+			(long long) st.st_size / bytes,
+			files->legs, files->level);
 
 		qsort(map, st.st_size / bytes, bytes, bufcmp);
 
