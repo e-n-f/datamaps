@@ -483,13 +483,8 @@ void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z
 		unsigned int x = 0, y = 0;
 		buf2xys(start, mapbits, 0, 1, &x, &y);
 
-		// x >>= (32 - z_draw - 8);
-		// y >>= (32 - z_draw - 8);
-
-		x <<= z_draw;
-		y <<= z_draw;
-		x >>= 24;
-		y >>= 24;
+		x >>= (32 - z_draw - 8);
+		y >>= (32 - z_draw - 8);
 
 		image[(y & 0xFF) * 256 + (x & 0xFF)] += 100;
 	}
