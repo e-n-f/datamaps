@@ -337,18 +337,6 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, double 
 
 void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw,
 	      double *image, int mapbits, int metabits, int bytes) {
-	fprintf(stderr, "drawing %d %d %d from %s\n", z_draw, x_draw, y_draw, fname);
-
-	int i;
-	for (i = 0; i < mapbits; i++) {
-		fprintf(stderr, "%d", (startbuf[i / 8] >> (7 - (i % 8))) & 1);
-	}
-	fprintf(stderr, "\n");
-	for (i = 0; i < mapbits; i++) {
-		fprintf(stderr, "%d", (endbuf[i / 8] >> (7 - (i % 8))) & 1);
-	}
-	fprintf(stderr, "\n");
-
 	char fn[strlen(fname) + 1 + 3 + 1];
 	sprintf(fn, "%s/1,0", fname);
 
@@ -381,11 +369,6 @@ void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z
 		start += bytes; // if not exact match, points to element before match
 	}
 
-#if 0
-	fprintf(stderr, "%llx to %llx\n", (long long) start, (long long) end);
-	fprintf(stderr, "found %lld of %lld\n", (long long) (end - start) / bytes, (long long) st.st_size / bytes);
-#endif
-
 #define ALL 13
 
 	int step;
@@ -396,12 +379,6 @@ void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z
         }
 
 	for (; start < end; start += step * bytes) {
-#if 0
-		for (i = 0; i < mapbits; i++) {
-			fprintf(stderr, "%d", (start[i / 8] >> (7 - (i % 8))) & 1);
-		}
-		fprintf(stderr, "\n");
-#endif
 		unsigned int x = 0, y = 0;
 		buf2xys(start, mapbits, 0, 1, &x, &y);
 
@@ -439,32 +416,15 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		exit(EXIT_FAILURE);
 	}
 
-	// fprintf(stderr, "size: %016llx\n", st.st_size);
-
 	unsigned char *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 	if (map == MAP_FAILED) {
 		perror("mmap");
 		exit(EXIT_FAILURE);
 	}
 
-#if 0
-	for (i = 0; i < mapbits; i++) {
-		fprintf(stderr, "%d", (startbuf[i / 8] >> (7 - (i % 8))) & 1);
-	}
-	fprintf(stderr, "  z %d\n", z_lookup);
-	for (i = 0; i < mapbits; i++) {
-		fprintf(stderr, "%d", (endbuf[i / 8] >> (7 - (i % 8))) & 1);
-	}
-	fprintf(stderr, "\n");
-#endif
-
 	gSortBytes = bytes;
 	unsigned char *start = search(startbuf, map, st.st_size / bytes, bytes, bufcmp);
 	unsigned char *end = search(endbuf, map, st.st_size / bytes, bytes, bufcmp);
-
-#if 0
-	fprintf(stderr, "%016llx %016llx\n", (long long) (start - map), (long long) (end - map));
-#endif
 
 	end += bytes; // points to the last value in range; need the one after that
 
@@ -487,7 +447,6 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		buf2xys(start + j * bytes, mapbits, z_lookup, components, x, y);
 
 		for (k = 0; k < components; k++) {
-			// fprintf(stderr, "%u %u\n", x[k], y[k]);
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 		}
 
@@ -562,7 +521,6 @@ int main(int argc, char **argv) {
 
 	// Do the single-point case
 
-	fprintf(stderr, "%d %d %d\n", z_draw, x_draw, y_draw);
 	process1(fname, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, bytes);
 
 	// Do the zoom levels smaller than this one
