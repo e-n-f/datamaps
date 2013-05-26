@@ -224,6 +224,13 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, double 
 	}
 }
 
+void drawPixel(double x, double y, double *image, double bright) {
+	putPixel(x,     y,     bright * rfpart(x) * rfpart(y), image);
+	putPixel(x + 1, y,     bright *  fpart(x) * rfpart(y), image);
+	putPixel(x,     y + 1, bright * rfpart(x) *  fpart(y), image);
+	putPixel(x + 1, y + 1, bright *  fpart(x) *  fpart(y), image);
+}
+
 void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
@@ -264,7 +271,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		start += bytes; // if not exact match, points to element before match
 	}
 
-	int step = 1, bright = 1;
+	int step = 1, bright = 100;
 	if (components == 1) {
 #define ALL 13
 		if (z_draw >= ALL) {
@@ -289,10 +296,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		}
 
 		if (components == 1) {
-			putPixel(xd[0],     yd[0],     100 * rfpart(xd[0]) * rfpart(yd[0]), image);
-			putPixel(xd[0] + 1, yd[0],     100 *  fpart(xd[0]) * rfpart(yd[0]), image);
-			putPixel(xd[0],     yd[0] + 1, 100 * rfpart(xd[0]) *  fpart(yd[0]), image);
-			putPixel(xd[0] + 1, yd[0] + 1, 100 *  fpart(xd[0]) *  fpart(yd[0]), image);
+			drawPixel(xd[0], yd[0], image, bright);
 		} else {
 			for (k = 1; k < components; k++) {
 				drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
