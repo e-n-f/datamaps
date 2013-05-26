@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <fcntl.h>
+#include "util.h"
 
 int mapbits = 2 * (16 + 8); // zoom level 16
 int metabits = 0;
@@ -21,81 +22,6 @@ struct file {
 
 	struct file *next;
 };
-
-// http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int *y) {
-	double lat_rad = lat * M_PI / 180;
-	unsigned long long n = 1LL << zoom;
-
-	*x = n * ((lon + 180) / 360);
-	*y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
-}
-
-void xy2buf(unsigned int x32, unsigned int y32, unsigned char *buf, int *offbits, int n, int skip) {
-	int i;
-
-	for (i = 31 - skip; i > 31 - n / 2; i--) {
-		// Bits come from x32 and y32 high-bit first
-
-		int xb = (x32 >> i) & 1;
-		int yb = (y32 >> i) & 1;
-
-		// And go into the buffer high-bit first
-
-		buf[*offbits / 8] |= yb << (7 - (*offbits % 8));
-		(*offbits)++;
-		buf[*offbits / 8] |= xb << (7 - (*offbits % 8));
-		(*offbits)++;
-	}
-}
-
-void meta2buf(int bits, long long data, unsigned char *buf, int *offbits, int max) {
-	int i;
-
-	for (i = bits - 1; i >= 0 && *offbits < max; i--) {
-		int b = (data >> i) & 1;
-		buf[*offbits / 8] |= b << (7 - (*offbits % 8));
-		(*offbits)++;
-	}
-}
-
-void buf2xys(unsigned char *buf, int mapbits, int skip, int n, unsigned int *x, unsigned int *y) {
-	int i, j;
-	int offbits = 0;
-
-	for (i = 0; i < n; i++) {
-		x[i] = 0;
-		y[i] = 0;
-	}
-
-	// First pull off the common bits
-
-	for (i = 31; i > 31 - skip; i--) {
-		int y0 = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
-		offbits++;
-		int x0 = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
-		offbits++;
-
-		for (j = 0; j < n; j++) {
-			x[j] |= x0 << i;
-			y[j] |= y0 << i;
-		}
-	}
-
-	// and then the remainder for each component
-
-	for (j = 0; j < n; j++) {
-		for (i = 31 - skip; i > 31 - mapbits / 2; i--) {
-			int y0 = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
-			offbits++;
-			int x0 = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
-			offbits++;
-
-			x[j] |= x0 << i;
-			y[j] |= y0 << i;
-		}
-	}
-}
 
 void usage(char *name) {
 	fprintf(stderr, "Usage: %s [-z zoom] [-m metadata-bits] -o destdir [file ...]\n",
@@ -226,11 +152,6 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 
 		fwrite(buf, sizeof(char), bytes, (*fo)->f);
 	}
-}
-
-static int gSortBytes;
-int bufcmp(const void *v1, const void *v2) {
-	return memcmp(v1, v2, gSortBytes);
 }
 
 int main(int argc, char **argv) {
