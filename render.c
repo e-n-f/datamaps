@@ -137,12 +137,7 @@ void buf2xys(unsigned char *buf, int mapbits, int skip, int n, unsigned int *x, 
 }
 
 int bytesfor(int mapbits, int metabits, int components, int z_lookup) {
-	int bits = mapbits + metabits;
-
-	int i;
-	for (i = 1; i < components; i++) {
-		bits += mapbits - 2 * z_lookup;
-	}
+	int bits = mapbits + metabits + (mapbits - 2 * z_lookup) * (components - 1);
 
 	return (bits + 7) / 8;
 }
@@ -486,8 +481,9 @@ int main(int argc, char **argv) {
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
 	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
 
-	// Do the zoom levels smaller than this one
-	// For zoom levels smaller than this one, we look up the entire area
+	// Do the zoom levels numbered greater than this one.
+	//
+	// For zoom levels greater than this one, we look up the entire area
 	// of the tile we are drawing, which will end up being multiple tiles
 	// of the higher zoom.
 
@@ -503,7 +499,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	// For zoom levels larger than this one, each stage looks up a
+	// For zoom levels numbered less than this one, each stage looks up a
 	// larger area for potential overlaps.
 
 	int x_lookup, y_lookup;
