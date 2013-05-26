@@ -55,7 +55,10 @@ void wxy2fxy(long long wx, long long wy, double *ox, double *oy, int z, int x, i
 void xy2buf(unsigned int x32, unsigned int y32, unsigned char *buf, int *offbits, int n, int skip) {
 	int i;
 
-	for (i = 31 - skip; i > 31 - n / 2; i--) {
+	n /= 2;
+	int ob = *offbits;
+
+	for (i = 31 - skip; i > 31 - n; i--) {
 		// Bits come from x32 and y32 high-bit first
 
 		int xb = (x32 >> i) & 1;
@@ -63,11 +66,13 @@ void xy2buf(unsigned int x32, unsigned int y32, unsigned char *buf, int *offbits
 
 		// And go into the buffer high-bit first
 
-		buf[*offbits / 8] |=  yb << (7 - (*offbits % 8));
-		(*offbits)++;
-		buf[*offbits / 8] |=  xb << (7 - (*offbits % 8));
-		(*offbits)++;
+		buf[ob >> 3] |=  yb << (7 - (ob & 7));
+		ob++;
+		buf[ob >> 3] |=  xb << (7 - (ob & 7));
+		ob++;
 	}
+
+	*offbits = ob;
 }
 
 // Fill startbuf and endbuf with the bit patterns for the start and end of the specified tile
