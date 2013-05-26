@@ -380,12 +380,14 @@ void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z
 
 	for (; start < end; start += step * bytes) {
 		unsigned int x = 0, y = 0;
+		double xd, yd;
 		buf2xys(start, mapbits, 0, 1, &x, &y);
+		wxy2fxy(x, y, &xd, &yd, z_draw, x_draw, y_draw);
 
-		x >>= (32 - z_draw - 8);
-		y >>= (32 - z_draw - 8);
-
-		image[(y & 0xFF) * 256 + (x & 0xFF)] += 100;
+		putPixel(xd,     yd,     100 * rfpart(xd) * rfpart(yd), image);
+		putPixel(xd + 1, yd,     100 *  fpart(xd) * rfpart(yd), image);
+		putPixel(xd,     yd + 1, 100 * rfpart(xd) *  fpart(yd), image);
+		putPixel(xd + 1, yd + 1, 100 *  fpart(xd) *  fpart(yd), image);
 	}
 
 	munmap(map, st.st_size);
