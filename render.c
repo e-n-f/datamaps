@@ -82,6 +82,9 @@ void xy2buf(unsigned int x32, unsigned int y32, unsigned char *buf, int *offbits
 
 // Fill startbuf and endbuf with the bit patterns for the start and end of the specified tile
 void zxy2bufs(unsigned int z, unsigned int x, unsigned int y, unsigned char *startbuf, unsigned char *endbuf, int bytes) {
+	memset(startbuf, 0, bytes);
+	memset(endbuf, 0, bytes);
+
 	int i = 0;
 
 	x <<= (32 - z);
@@ -516,21 +519,17 @@ int main(int argc, char **argv) {
 	double image[256 * 256];
 	memset(image, 0, sizeof(image));
 
-	// For zoom levels smaller than this one, we look up the entire area
-	// of the tile we are drawing, which will end up being multiple tiles
-	// of the higher zoom.
+	// Do the single-point case
 
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
-	memset(startbuf, 0, bytes);
-	memset(endbuf, 0, bytes);
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-
-	// Do the single-point case
-
 	process1(fname, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, bytes);
 
 	// Do the zoom levels smaller than this one
+	// For zoom levels smaller than this one, we look up the entire area
+	// of the tile we are drawing, which will end up being multiple tiles
+	// of the higher zoom.
 
 	int z_lookup;
 	for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < mapbits / 2; z_lookup++) {
@@ -539,10 +538,7 @@ int main(int argc, char **argv) {
 
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
-			memset(startbuf, 0, bytes);
-			memset(endbuf, 0, bytes);
 			zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-
 			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
 		}
 	}
@@ -559,9 +555,6 @@ int main(int argc, char **argv) {
 
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
-			memset(startbuf, 0, bytes);
-			memset(endbuf, 0, bytes);
-
 			zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf, bytes);
 			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
 		}
