@@ -349,72 +349,16 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, double 
 	}
 }
 
-void process1(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw,
-	      double *image, int mapbits, int metabits) {
-	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
-
-	char fn[strlen(fname) + 1 + 3 + 1];
-	sprintf(fn, "%s/1,0", fname);
-
-	int fd = open(fn, O_RDONLY);
-	if (fd < 0) {
-		perror(fn);
-		return;
-	}
-
-	struct stat st;
-	if (fstat(fd, &st) < 0) {
-		perror("stat");
-		exit(EXIT_FAILURE);
-	}
-
-	unsigned char *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-	if (map == MAP_FAILED) {
-		perror("mmap");
-		exit(EXIT_FAILURE);
-	}
-
-	gSortBytes = bytes;
-	unsigned char *start = search(startbuf, map, st.st_size / bytes, bytes, bufcmp);
-	unsigned char *end = search(endbuf, map, st.st_size / bytes, bytes, bufcmp);
-
-	end += bytes; // points to the last value in range; need the one after that
-
-	if (start != end && memcmp(start, startbuf, bytes) != 0) {
-		// XXX is this true with meta bits?
-		start += bytes; // if not exact match, points to element before match
-	}
-
-#define ALL 13
-
-	int step;
-        if (z_draw >= ALL) {
-                step = 1;
-        } else {
-                step = 1 << (ALL - z_draw);
-        }
-
-	for (; start < end; start += step * bytes) {
-		unsigned int x = 0, y = 0;
-		double xd, yd;
-		buf2xys(start, mapbits, 0, 1, &x, &y);
-		wxy2fxy(x, y, &xd, &yd, z_draw, x_draw, y_draw);
-
-		putPixel(xd,     yd,     100 * rfpart(xd) * rfpart(yd), image);
-		putPixel(xd + 1, yd,     100 *  fpart(xd) * rfpart(yd), image);
-		putPixel(xd,     yd + 1, 100 * rfpart(xd) *  fpart(yd), image);
-		putPixel(xd + 1, yd + 1, 100 *  fpart(xd) *  fpart(yd), image);
-	}
-
-	munmap(map, st.st_size);
-	close(fd);
-}
-
 void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
 	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
-	sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
+
+	if (components == 1) {
+		sprintf(fn, "%s/1,0", fname);
+	} else {
+		sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
+	}
 
 	int fd = open(fn, O_RDONLY);
 	if (fd < 0) {
@@ -445,10 +389,20 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		start += bytes; // if not exact match, points to element before match
 	}
 
-	// no real rationale for exponent -- chosen by experiment
-	int bright = exp(log(1.53) * z_draw) * 2.3;
+	int step = 1, bright = 1;
+	if (components == 1) {
+#define ALL 13
+		if (z_draw >= ALL) {
+			step = 1;
+		} else {
+			step = 1 << (ALL - z_draw);
+		}
+	} else {
+		// no real rationale for exponent -- chosen by experiment
+		bright = exp(log(1.53) * z_draw) * 2.3;
+	}
 
-	for (; start < end; start += bytes) {
+	for (; start < end; start += step * bytes) {
 		unsigned int x[components], y[components];
 		double xd[components], yd[components];
 		int k;
@@ -459,8 +413,15 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 		}
 
-		for (k = 1; k < components; k++) {
-			drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+		if (components == 1) {
+			putPixel(xd[0],     yd[0],     100 * rfpart(xd[0]) * rfpart(yd[0]), image);
+			putPixel(xd[0] + 1, yd[0],     100 *  fpart(xd[0]) * rfpart(yd[0]), image);
+			putPixel(xd[0],     yd[0] + 1, 100 * rfpart(xd[0]) *  fpart(yd[0]), image);
+			putPixel(xd[0] + 1, yd[0] + 1, 100 *  fpart(xd[0]) *  fpart(yd[0]), image);
+		} else {
+			for (k = 1; k < components; k++) {
+				drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+			}
 		}
 	}
 
@@ -523,7 +484,7 @@ int main(int argc, char **argv) {
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	process1(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
+	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
 
 	// Do the zoom levels smaller than this one
 	// For zoom levels smaller than this one, we look up the entire area
