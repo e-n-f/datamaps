@@ -407,8 +407,10 @@ void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z
 		start += bytes; // if not exact match, points to element before match
 	}
 
+#if 0
 	fprintf(stderr, "%llx to %llx\n", (long long) start, (long long) end);
 	fprintf(stderr, "found %lld of %lld\n", (long long) (end - start) / bytes, (long long) st.st_size / bytes);
+#endif
 
 #define ALL 13
 
@@ -440,7 +442,6 @@ void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z
 }
 
 void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits) {
-	fprintf(stderr, "components %d\n", components);
 	int i;
 
 	int bits = mapbits + metabits;
@@ -472,6 +473,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		exit(EXIT_FAILURE);
 	}
 
+#if 0
 	for (i = 0; i < mapbits; i++) {
 		fprintf(stderr, "%d", (startbuf[i / 8] >> (7 - (i % 8))) & 1);
 	}
@@ -480,12 +482,15 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		fprintf(stderr, "%d", (endbuf[i / 8] >> (7 - (i % 8))) & 1);
 	}
 	fprintf(stderr, "\n");
+#endif
 
 	gSortBytes = bytes;
 	unsigned char *start = search(startbuf, map, st.st_size / bytes, bytes, bufcmp);
 	unsigned char *end = search(endbuf, map, st.st_size / bytes, bytes, bufcmp);
 
+#if 0
 	fprintf(stderr, "%016llx %016llx\n", (long long) (start - map), (long long) (end - map));
+#endif
 
 	end += bytes; // points to the last value in range; need the one after that
 
