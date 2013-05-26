@@ -439,22 +439,19 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 	end += bytes; // points to the last value in range; need the one after that
 
 	if (start != end && memcmp(start, end, bytes) != 0) {
+		// XXX is this true with meta bits?
 		start += bytes; // if not exact match, points to element before match
 	}
-
-	unsigned count = (end - start) / bytes;
 
 	// no real rationale for exponent -- chosen by experiment
 	int bright = exp(log(1.53) * z_draw) * 2.3;
 
-	unsigned int j;
-	for (j = 0; j < count; j += 1) {
-		int k;
-
+	for (; start < end; start += bytes) {
 		unsigned int x[components], y[components];
 		double xd[components], yd[components];
+		int k;
 
-		buf2xys(start + j * bytes, mapbits, z_lookup, components, x, y);
+		buf2xys(start, mapbits, z_lookup, components, x, y);
 
 		for (k = 0; k < components; k++) {
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
