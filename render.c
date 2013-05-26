@@ -595,7 +595,7 @@ int main(int argc, char **argv) {
 
 	for (i = 2; i <= maxn; i++) {
 		int z_lookup;
-		for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < 24; z_lookup++) {
+		for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < mapbits / 2; z_lookup++) {
 			int bits = mapbits + metabits;
 
 			int n;
