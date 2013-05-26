@@ -133,14 +133,10 @@ void buf2xys(unsigned char *buf, int mapbits, int skip, int n, unsigned int *x, 
 	}
 }
 
-void putPixel(int x0, int y0, double *image, double add) {
+void putPixel(int x0, int y0, double add, double *image) {
 	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
 		image[y0 * 256 + x0] += add;
 	}
-}
-
-void plot(int x0, int y0, double c, double *image, double add) {
-	putPixel(x0, y0, image, add * c);
 }
 
 double fpart(double x) {
@@ -185,11 +181,11 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 		y0 = (y0 + y1) / 2;
 
 		if (steep) {
-			plot(y0,     x0, dx * rfpart(y0), image, add);
-			plot(y0 + 1, x0, dx *  fpart(y0), image, add);
+			putPixel(y0,     x0, dx * rfpart(y0) * add, image);
+			putPixel(y0 + 1, x0, dx *  fpart(y0) * add, image);
 		} else {
-			plot(x0, y0,     dx * rfpart(y0), image, add);
-			plot(x0, y0 + 1, dx *  fpart(y0), image, add);
+			putPixel(x0, y0,     dx * rfpart(y0) * add, image);
+			putPixel(x0, y0 + 1, dx *  fpart(y0) * add, image);
 		}
 
 		return;
@@ -200,11 +196,11 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 		double yy = y0 + .5 * rfpart(x0) * gradient;
 
 		if (steep) {
-			plot(yy,     x0, rfpart(x0) * rfpart(yy), image, add);
-			plot(yy + 1, x0, rfpart(x0) *  fpart(yy), image, add);
+			putPixel(yy,     x0, rfpart(x0) * rfpart(yy) * add, image);
+			putPixel(yy + 1, x0, rfpart(x0) *  fpart(yy) * add, image);
 		} else {
-			plot(x0, yy,     rfpart(x0) * rfpart(yy), image, add);
-			plot(x0, yy + 1, rfpart(x0) *  fpart(yy), image, add);
+			putPixel(x0, yy,     rfpart(x0) * rfpart(yy) * add, image);
+			putPixel(x0, yy + 1, rfpart(x0) *  fpart(yy) * add, image);
 		}
 
 		y0 += gradient * rfpart(x0);
@@ -216,11 +212,11 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 		double yy = y1 - .5 * fpart(x1) * gradient;
 
 		if (steep) {
-			plot(yy,     x1, fpart(x1) * rfpart(yy), image, add);
-			plot(yy + 1, x1, fpart(x1) *  fpart(yy), image, add);
+			putPixel(yy,     x1, fpart(x1) * rfpart(yy) * add, image);
+			putPixel(yy + 1, x1, fpart(x1) *  fpart(yy) * add, image);
 		} else {
-			plot(x1, yy,     fpart(x1) * rfpart(yy), image, add);
-			plot(x1, yy + 1, fpart(x1) *  fpart(yy), image, add);
+			putPixel(x1, yy,     fpart(x1) * rfpart(yy) * add, image);
+			putPixel(x1, yy + 1, fpart(x1) *  fpart(yy) * add, image);
 		}
 
 		y1 -= gradient * fpart(x1);
@@ -234,12 +230,11 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 
 	for (; x0 < x1; x0++) {
 		if (steep) {
-			plot(y0,     x0, rfpart(y0), image, add);
-			plot(y0 + 1, x0,  fpart(y0), image, add);
-
+			putPixel(y0,     x0, rfpart(y0) * add, image);
+			putPixel(y0 + 1, x0,  fpart(y0) * add, image);
 		} else {
-			plot(x0, y0,     rfpart(y0), image, add);
-			plot(x0, y0 + 1,  fpart(y0), image, add);
+			putPixel(x0, y0,     rfpart(y0) * add, image);
+			putPixel(x0, y0 + 1,  fpart(y0) * add, image);
 		}
 
 		y0 += gradient;
