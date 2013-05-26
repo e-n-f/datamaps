@@ -48,6 +48,7 @@ void out(unsigned char *buf, int width, int height) {
 	png_image_free(&image);
 }
 
+// Convert world coordinates to floating pixels within a particular tile
 void wxy2fxy(long long wx, long long wy, double *ox, double *oy, int z, int x, int y) {
 	// then offset origin
 
@@ -60,6 +61,7 @@ void wxy2fxy(long long wx, long long wy, double *ox, double *oy, int z, int x, i
 	*oy = (double) wy / (1 << (32 - z - 8));
 }
 
+// Convert world coordinates to a bit stream
 void xy2buf(unsigned int x32, unsigned int y32, unsigned char *buf, int *offbits, int n, int skip) {
 	int i;
 
@@ -78,6 +80,7 @@ void xy2buf(unsigned int x32, unsigned int y32, unsigned char *buf, int *offbits
 	}
 }
 
+// Fill startbuf and endbuf with the bit patterns for the start and end of the specified tile
 void zxy2bufs(unsigned int z, unsigned int x, unsigned int y, unsigned char *startbuf, unsigned char *endbuf, int bytes) {
 	int i = 0;
 
@@ -91,6 +94,7 @@ void zxy2bufs(unsigned int z, unsigned int x, unsigned int y, unsigned char *sta
 	}
 }
 
+// Convert a bit stream to N xy pairs (world coordinates)
 void buf2xys(unsigned char *buf, int mapbits, int skip, int n, unsigned int *x, unsigned int *y) {
 	int i, j;
 	int offbits = 0;
