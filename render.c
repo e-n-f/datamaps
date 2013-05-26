@@ -349,8 +349,10 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, double 
 	}
 }
 
-void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw,
-	      double *image, int mapbits, int metabits, int bytes) {
+void process1(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw,
+	      double *image, int mapbits, int metabits) {
+	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
+
 	char fn[strlen(fname) + 1 + 3 + 1];
 	sprintf(fn, "%s/1,0", fname);
 
@@ -521,7 +523,7 @@ int main(int argc, char **argv) {
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	process1(fname, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, bytes);
+	process1(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
 
 	// Do the zoom levels smaller than this one
 	// For zoom levels smaller than this one, we look up the entire area
