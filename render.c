@@ -133,6 +133,17 @@ void buf2xys(unsigned char *buf, int mapbits, int skip, int n, unsigned int *x, 
 	}
 }
 
+int bytesfor(int mapbits, int metabits, int components, int z_lookup) {
+	int bits = mapbits + metabits;
+
+	int i;
+	for (i = 1; i < components; i++) {
+		bits += mapbits - 2 * z_lookup;
+	}
+
+	return (bits + 7) / 8;
+}
+
 void putPixel(int x0, int y0, double add, double *image) {
 	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
 		image[y0 * 256 + x0] += add;
@@ -395,13 +406,7 @@ void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z
 }
 
 void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits) {
-	int i;
-
-	int bits = mapbits + metabits;
-	for (i = 1; i < components; i++) {
-		bits += mapbits - 2 * z_lookup;
-	}
-	int bytes = (bits + 7) / 8;
+	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
 	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
 	sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
@@ -527,17 +532,10 @@ int main(int argc, char **argv) {
 
 	// Do the zoom levels smaller than this one
 
-	for (i = 2; i <= maxn; i++) {
-		int z_lookup;
-		for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < mapbits / 2; z_lookup++) {
-			int bits = mapbits + metabits;
-
-			int n;
-			for (n = 1; i < i; n++) {
-				bits += mapbits - 2 * z_lookup;
-			}
-
-			int bytes = (bits + 7) / 8;
+	int z_lookup;
+	for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < mapbits / 2; z_lookup++) {
+		for (i = 2; i <= maxn; i++) {
+			int bytes = bytesfor(mapbits, metabits, i, z_lookup);
 
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
@@ -552,19 +550,12 @@ int main(int argc, char **argv) {
 	// For zoom levels larger than this one, each stage looks up a
 	// larger area for potential overlaps.
 
-	for (i = 2; i <= maxn; i++) {
-		int x_lookup, y_lookup, z_lookup;
-		for (z_lookup = z_draw, x_lookup = x_draw, y_lookup = y_draw;
-		     z_lookup >= 0;
-		     z_lookup--, x_lookup /= 2, y_lookup /= 2) {
-			int bits = mapbits + metabits;
-
-			int n;
-			for (n = 1; i < i; n++) {
-				bits += mapbits - 2 * z_lookup;
-			}
-
-			int bytes = (bits + 7) / 8;
+	int x_lookup, y_lookup;
+	for (z_lookup = z_draw, x_lookup = x_draw, y_lookup = y_draw;
+	     z_lookup >= 0;
+	     z_lookup--, x_lookup /= 2, y_lookup /= 2) {
+		for (i = 2; i <= maxn; i++) {
+			int bytes = bytesfor(mapbits, metabits, i, z_lookup);
 
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
