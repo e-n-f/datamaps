@@ -102,12 +102,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 			*maxn = n;
 		}
 
-		int bits = mapbits + metabits;
-		for (i = 1; i < n; i++) {
-			bits += mapbits - 2 * common;
-		}
-
-		int bytes = (bits + 7) / 8;
+		int bytes = bytesfor(mapbits, metabits, n, common);
 		unsigned char buf[bytes];
 		memset(buf, 0, bytes);
 
@@ -118,7 +113,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 		}
 
 		for (i = 0; i < m; i++) {
-			meta2buf(metasize[i], meta[i], buf, &off, bits);
+			meta2buf(metasize[i], meta[i], buf, &off, bytes * 8);
 		}
 
 		struct file **fo;
@@ -250,11 +245,7 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
-		int bits = mapbits + metabits;
-		for (i = 1; i < files->legs; i++) {
-			bits += mapbits - 2 * files->level;
-		}
-		int bytes = (bits + 7) / 8;
+		int bytes = bytesfor(mapbits, metabits, files->legs, files->level);
 		gSortBytes = bytes;
 
 		fprintf(stderr,
