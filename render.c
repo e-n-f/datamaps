@@ -8,27 +8,6 @@
 #include <png.h>
 #include <math.h>
 
-#define FNAME "pairs"
-
-#define LEVELS 24 // XXX
-#define BYTES (2 * 2 * LEVELS / 8)
-
-int quadcmp(const void *v1, const void *v2) {
-	const unsigned char *q1 = v1;
-	const unsigned char *q2 = v2;
-
-	int i;
-	for (i = 2 * 2 * LEVELS / 8 - 1; i >= 0; i--) {
-		int diff = (int) q1[i] - (int) q2[i];
-
-		if (diff != 0) {
-			return diff;
-		}
-	}
-
-	return 0;
-}
-
 static int gSortBytes;
 int bufcmp(const void *v1, const void *v2) {
 	return memcmp(v1, v2, gSortBytes);
@@ -69,40 +48,7 @@ void out(unsigned char *buf, int width, int height) {
 	png_image_free(&image);
 }
 
-unsigned long long buf2quad(unsigned char *buf) {
-	unsigned long long quad = 0;
-	int i;
-
-	for (i = 0; i < 2 * LEVELS; i += 8) {
-		quad |= ((unsigned long long) buf[i / 8]) << i;
-	}
-
-	quad <<= (64 - (2 * LEVELS));
-	return quad;
-}
-
-void quad2buf(unsigned long long quad, unsigned char *buf) {
-	int i;
-
-	quad >>= (64 - (2 * LEVELS));
-
-	for (i = 0; i < 2 * LEVELS; i += 8) {
-		buf[i / 8] = (quad >> i) & 0xFF;
-		buf[i / 8 + BYTES / 2] = (quad >> i) & 0xFF;
-	}
-}
-
-void quad2fxy(unsigned long long quad, double *ox, double *oy, int z, int x, int y) {
-	long long wx = 0, wy = 0;
-	int i;
-
-	// first decode into world coordinates
-
-        for (i = 0; i < 32; i++) {
-                wx |= ((quad >> (i * 2)) & 1) << i;
-                wy |= ((quad >> (i * 2 + 1)) & 1) << i;
-        }
-
+void wxy2fxy(long long wx, long long wy, double *ox, double *oy, int z, int x, int y) {
 	// then offset origin
 
 	wx -= (long long) x << (32 - z);
@@ -493,14 +439,23 @@ void process1(char *fname, unsigned char *startbuf, unsigned char *endbuf, int z
 	close(fd);
 }
 
-void process(int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image) {
-	char fname[strlen(FNAME) + 3 + 5 + 1];
-	sprintf(fname, "%s/%d.sort", FNAME, z_lookup);
+void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits) {
+	fprintf(stderr, "components %d\n", components);
+	int i;
 
-	int fd = open(fname, O_RDONLY);
+	int bits = mapbits + metabits;
+	for (i = 1; i < components; i++) {
+		bits += mapbits - 2 * z_lookup;
+	}
+	int bytes = (bits + 7) / 8;
+
+	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
+	sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
+
+	int fd = open(fn, O_RDONLY);
 	if (fd < 0) {
-		perror(fname);
-		exit(EXIT_FAILURE);
+		perror(fn);
+		return;
 	}
 
 	struct stat st;
@@ -511,41 +466,55 @@ void process(int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z
 
 	// fprintf(stderr, "size: %016llx\n", st.st_size);
 
-	unsigned long long *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	unsigned char *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 	if (map == MAP_FAILED) {
 		perror("mmap");
 		exit(EXIT_FAILURE);
 	}
 
-	unsigned char *start = search(startbuf, map, st.st_size / BYTES, BYTES, quadcmp);
-	unsigned char *end = search(endbuf, map, st.st_size / BYTES, BYTES, quadcmp);
+	for (i = 0; i < mapbits; i++) {
+		fprintf(stderr, "%d", (startbuf[i / 8] >> (7 - (i % 8))) & 1);
+	}
+	fprintf(stderr, "  z %d\n", z_lookup);
+	for (i = 0; i < mapbits; i++) {
+		fprintf(stderr, "%d", (endbuf[i / 8] >> (7 - (i % 8))) & 1);
+	}
+	fprintf(stderr, "\n");
 
-	// fprintf(stderr, "%016llx %016llx\n", startquad, endquad);
-	// fprintf(stderr, "%016llx %016llx\n", start - map, end - map);
+	gSortBytes = bytes;
+	unsigned char *start = search(startbuf, map, st.st_size / bytes, bytes, bufcmp);
+	unsigned char *end = search(endbuf, map, st.st_size / bytes, bytes, bufcmp);
 
-	end += BYTES; // points to the last value in range; need the one after that
+	fprintf(stderr, "%016llx %016llx\n", (long long) (start - map), (long long) (end - map));
 
-	if (start != end && memcmp(start, end, BYTES) != 0) {
-		start += BYTES; // if not exact match, points to element before match
+	end += bytes; // points to the last value in range; need the one after that
+
+	if (start != end && memcmp(start, end, bytes) != 0) {
+		start += bytes; // if not exact match, points to element before match
 	}
 
-	unsigned count = (end - start) / BYTES;
+	unsigned count = (end - start) / bytes;
 
 	// no real rationale for exponent -- chosen by experiment
 	int bright = exp(log(1.53) * z_draw) * 2.3;
 
 	unsigned int j;
 	for (j = 0; j < count; j += 1) {
-		unsigned long long quad1 = buf2quad(start + j * BYTES);
-		unsigned long long quad2 = buf2quad(start + j * BYTES + BYTES / 2);
+		int k;
 
-		double x1, y1;
-		double x2, y2;
+		unsigned int x[components], y[components];
+		double xd[components], yd[components];
 
-		quad2fxy(quad1, &x1, &y1, z_draw, x_draw, y_draw);
-		quad2fxy(quad2, &x2, &y2, z_draw, x_draw, y_draw);
+		buf2xys(start + j * bytes, mapbits, z_lookup, components, x, y);
 
-		drawClip(x1, y1, x2, y2, image, bright);
+		for (k = 0; k < components; k++) {
+			// fprintf(stderr, "%u %u\n", x[k], y[k]);
+			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
+		}
+
+		for (k = 1; k < components; k++) {
+			drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+		}
 	}
 
 	munmap(map, st.st_size);
@@ -617,25 +586,56 @@ int main(int argc, char **argv) {
 	fprintf(stderr, "%d %d %d\n", z_draw, x_draw, y_draw);
 	process1(fname, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, bytes);
 
-#if 0
 	// Do the zoom levels smaller than this one
 
-	int z_lookup;
-	for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < 24; z_lookup++) {
-		process(z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image);
+	for (i = 2; i <= maxn; i++) {
+		int z_lookup;
+		for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < 24; z_lookup++) {
+			int bits = mapbits + metabits;
+
+			int n;
+			for (n = 1; i < i; n++) {
+				bits += mapbits - 2 * z_lookup;
+			}
+
+			int bytes = (bits + 7) / 8;
+
+			unsigned char startbuf[bytes];
+			unsigned char endbuf[bytes];
+			memset(startbuf, 0, bytes);
+			memset(endbuf, 0, bytes);
+			zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
+
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
+		}
 	}
 
 	// For zoom levels larger than this one, each stage looks up a
 	// larger area for potential overlaps.
 
-	int x_lookup, y_lookup;
-	for (z_lookup = z_draw, x_lookup = x_draw, y_lookup = y_draw;
-	     z_lookup >= 0;
-	     z_lookup--, x_lookup /= 2, y_lookup /= 2) {
-		zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf);
-		process(z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image);
+	for (i = 2; i <= maxn; i++) {
+		int x_lookup, y_lookup, z_lookup;
+		for (z_lookup = z_draw, x_lookup = x_draw, y_lookup = y_draw;
+		     z_lookup >= 0;
+		     z_lookup--, x_lookup /= 2, y_lookup /= 2) {
+			int bits = mapbits + metabits;
+
+			int n;
+			for (n = 1; i < i; n++) {
+				bits += mapbits - 2 * z_lookup;
+			}
+
+			int bytes = (bits + 7) / 8;
+
+			unsigned char startbuf[bytes];
+			unsigned char endbuf[bytes];
+			memset(startbuf, 0, bytes);
+			memset(endbuf, 0, bytes);
+
+			zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf, bytes);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
+		}
 	}
-#endif
 
 double limit = 400;
 double limit2 = 2000;
