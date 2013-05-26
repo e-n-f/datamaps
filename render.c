@@ -135,31 +135,6 @@ void putPixel(int x0, int y0, double *image, double add) {
 	}
 }
 
-// http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
-void drawLine(int x0, int y0, int x1, int y1, double *image, double add) {
-        int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
-        int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
-        int err = ((dx > dy) ? dx : -dy) / 2, e2;
-
-	while (1) {
-                if (x0 == x1 && y0 == y1) {
-			break;
-		}
-
-		putPixel(x0, y0, image, add);
-
-                e2 = err;
-                if (e2 > -dx) { 
-			err -= dy;
-			x0 += sx;
-		}
-                if (e2 <  dy) {
-			err += dx;
-			y0 += sy;
-		}
-        }
-}
-
 void plot(int x0, int y0, double c, double *image, double add) {
 	putPixel(x0, y0, image, add * c);
 }
