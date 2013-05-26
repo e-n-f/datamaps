@@ -66,10 +66,10 @@ void xy2buf(unsigned int x32, unsigned int y32, unsigned char *buf, int *offbits
 
 		// And go into the buffer high-bit first
 
-		buf[ob >> 3] |=  yb << (7 - (ob & 7));
-		ob++;
-		buf[ob >> 3] |=  xb << (7 - (ob & 7));
-		ob++;
+		unsigned int shift = 7 - (ob & 7);
+
+		buf[ob >> 3] |= (yb << shift) | (xb << (shift - 1));
+		ob += 2;
 	}
 
 	*offbits = ob;
