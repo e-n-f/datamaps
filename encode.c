@@ -67,6 +67,11 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 			}
 		}
 
+		if (n == 0) {
+			fprintf(stderr, "No valid points in %s", s);
+			continue;
+		}
+
 		// Project each point to web mercator
 
 		int i;
