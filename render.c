@@ -300,7 +300,30 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			drawPixel(xd[0], yd[0], image, bright);
 		} else {
 			for (k = 1; k < components; k++) {
-				drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+				long long xk1 = x[k - 1];
+				long long xk = x[k];
+
+				if (xk - xk1 >= (1LL << 31)) {
+					wxy2fxy(xk - (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+
+					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
+					wxy2fxy(xk1 + (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+
+					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
+				} else if (xk1 - xk >= (1LL << 31)) {
+					wxy2fxy(xk1 - (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+
+					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
+					wxy2fxy(xk + (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+
+					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
+				} else {
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+				}
 			}
 		}
 	}
