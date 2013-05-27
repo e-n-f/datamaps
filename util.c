@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "util.h"
 
 int gSortBytes;
 int bufcmp(const void *v1, const void *v2) {
