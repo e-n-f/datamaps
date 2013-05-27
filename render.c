@@ -276,6 +276,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 #define ALL 13
 		if (z_draw >= ALL) {
 			step = 1;
+			bright = bright << (z_draw - ALL);
 		} else {
 			step = 1 << (ALL - z_draw);
 		}
