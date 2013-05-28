@@ -165,7 +165,7 @@ int computeOutCode(double x, double y) {
 void drawClip(double x0, double y0, double x1, double y1, double *image, double add) {
         double dx = fabs(x1 - x0);
         double dy = fabs(y1 - y0);
-	add /= sqrt(dx * dx + dy * dy);
+	// add /= sqrt(dx * dx + dy * dy);
 
 	if (add < 5) {
 		return;
@@ -360,7 +360,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		start += bytes; // if not exact match, points to element before match
 	}
 
-	int step = 1, bright = 100, brush = 1;
+	int step = 1, bright = 90, brush = 1;
 	if (components == 1) {
 #define ALL 13
 		if (z_draw >= ALL) {
@@ -370,8 +370,17 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			step = 1 << (ALL - z_draw);
 		}
 	} else {
-		// no real rationale for exponent -- chosen by experiment
-		bright = exp(log(1.53) * z_draw) * 2.3;
+		bright = 200; // looks good at zoom level 5
+
+		// 1.3 very bright in chicago
+		// 1.25 looks pretty good
+		// 1.2 only gets to f1 at z18
+		// 1.1 somewhat dim in chicago
+
+		// 1.23: z16 gets to f8
+		//       z17 gets a little beyond pure white
+
+		bright *= exp(log(1.23) * (z_draw - 5));
 	}
 
 	for (; start < end; start += step * bytes) {
@@ -566,10 +575,15 @@ int main(int argc, char **argv) {
 		}
 	}
 
-double limit = 400;
-double limit2 = 2000;
-
 	unsigned char img2[256 * 256 * 4];
+
+	int midr = 128; 
+	int midg = 128;
+	int midb = 128;
+
+	double limit2 = 2000;
+	double limit = limit2 / 2;
+
 	for (i = 0; i < 256 * 256; i++) {
 		if (image[i] == 0) {
 			img2[4 * i + 0] = 0;
@@ -578,15 +592,16 @@ double limit2 = 2000;
 			img2[4 * i + 3] = transparency;
 		} else {
 			if (image[i] <= limit) {
-				img2[4 * i + 0] = 0;
-				img2[4 * i + 1] = 255 * (image[i] / limit);
-				img2[4 * i + 2] = 0;
+				img2[4 * i + 0] = midr * (image[i] / limit);
+				img2[4 * i + 1] = midg * (image[i] / limit);
+				img2[4 * i + 2] = midb * (image[i] / limit);
 				img2[4 * i + 3] = 255 * (image[i] / limit) +
 						  transparency * (1 - (image[i] / limit));
 			} else if (image[i] <= limit2) {
-				img2[4 * i + 0] = 255 * (image[i] - limit) / (limit2 - limit);
-				img2[4 * i + 1] = 255;
-				img2[4 * i + 2] = 255 * (image[i] - limit) / (limit2 - limit);
+				double along = (image[i] - limit) / (limit2 - limit);
+				img2[4 * i + 0] = 255 * along + midr * (1 - along);
+				img2[4 * i + 1] = 255 * along + midg * (1 - along);
+				img2[4 * i + 2] = 255 * along + midb * (1 - along);
 				img2[4 * i + 3] = 255;
 			} else {
 				img2[4 * i + 0] = 255;
