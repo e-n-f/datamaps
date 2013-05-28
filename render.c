@@ -320,7 +320,7 @@ void drawBrush(double x, double y, double *image, double bright, int brush) {
 	}
 }
 
-void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits) {
+void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits, int dump) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
 	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
@@ -385,7 +385,44 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 		}
 
-		if (components == 1) {
+		if (dump) {
+			// XXX should we clip
+			// instead of just excluding based on bounding box?
+
+			int above = 1, below = 1, left = 1, right = 1;
+
+			for (k = 0; k < components; k++) {
+				if (xd[k] >= 0) {
+					left = 0;
+				}
+				if (xd[k] <= 256) {
+					right = 0;
+				}
+				if (yd[k] >= 0) {
+					above = 0;
+				}
+				if (yd[k] <= 256) {
+					below = 0;
+				}
+			}
+
+			if (! (above || below || left || right)) {
+				for (k = 0; k < components; k++) {
+					double lat, lon;
+					tile2latlon(x[k], y[k], 32, &lat, &lon);
+
+					printf("%lf,%lf ", lat, lon);
+				}
+
+				printf("// ");
+
+				for (k = 0; k < components; k++) {
+					printf("%08x %08x ", x[k], y[k]);
+				}
+
+				printf("\n");
+			}
+		} else if (components == 1) {
 			if (brush == 1) {
 				drawPixel(xd[0], yd[0], image, bright);
 			} else {
@@ -425,24 +462,36 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 	close(fd);
 }
 
+void usage(char **argv) {
+	fprintf(stderr, "Usage: %s [-t transparency] [-d] file z x y\n", argv[0]);
+	exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv) {
 	int i;
 	extern int optind;
 	extern char *optarg;
 
 	int transparency = 224;
+	int dump = 0;
 
-	while ((i = getopt(argc, argv, "t:")) != -1) {
+	while ((i = getopt(argc, argv, "t:d")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
 			break;
+
+		case 'd':
+			dump = 1;
+			break;
+
+		default:
+			usage(argv);
 		}
 	}
 
 	if (argc - optind != 4) {
-		fprintf(stderr, "Usage: %s file z x y\n", argv[0]);
-		exit(EXIT_FAILURE);
+		usage(argv);
 	}
 
 	char *fname = argv[optind];
@@ -480,7 +529,7 @@ int main(int argc, char **argv) {
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
+	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump);
 
 	// Do the zoom levels numbered greater than this one.
 	//
@@ -489,14 +538,14 @@ int main(int argc, char **argv) {
 	// of the higher zoom.
 
 	int z_lookup;
-	for (z_lookup = z_draw + 1; z_lookup < z_draw + 9 && z_lookup < mapbits / 2; z_lookup++) {
+	for (z_lookup = z_draw + 1; (dump || z_lookup < z_draw + 9) && z_lookup <= mapbits / 2; z_lookup++) {
 		for (i = 2; i <= maxn; i++) {
 			int bytes = bytesfor(mapbits, metabits, i, z_lookup);
 
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump);
 		}
 	}
 
@@ -513,7 +562,7 @@ int main(int argc, char **argv) {
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump);
 		}
 	}
 
@@ -548,6 +597,9 @@ double limit2 = 2000;
 		}
 	}
 
-	out(img2, 256, 256);
+	if (!dump) {
+		out(img2, 256, 256);
+	}
+
 	return 0;
 }

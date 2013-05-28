@@ -39,6 +39,14 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
         *y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
 }
 
+// http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+void tile2latlon(unsigned int x, unsigned int y, int zoom, double *lat, double *lon) {
+	unsigned long long n = 1LL << zoom;
+	*lon = 360.0 * x / n - 180.0;
+	double lat_rad = atan(sinh(M_PI * (1 - 2.0 * y / n)));
+	*lat = lat_rad * 180 / M_PI;
+}
+
 // Convert world coordinates to floating pixels within a particular tile
 void wxy2fxy(long long wx, long long wy, double *ox, double *oy, int z, int x, int y) {
 	// then offset origin
