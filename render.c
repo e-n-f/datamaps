@@ -163,14 +163,6 @@ int computeOutCode(double x, double y) {
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
 void drawClip(double x0, double y0, double x1, double y1, double *image, double add) {
-        double dx = fabs(x1 - x0);
-        double dy = fabs(y1 - y0);
-	// add /= sqrt(dx * dx + dy * dy);
-
-	if (add < 5) {
-		return;
-	}
-
 	int outcode0 = computeOutCode(x0, y0);
 	int outcode1 = computeOutCode(x1, y1);
 	int accept = 0;
@@ -320,7 +312,7 @@ void drawBrush(double x, double y, double *image, double bright, int brush) {
 	}
 }
 
-void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits, int dump) {
+void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int mapbits, int metabits, int dump, int gps) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
 	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
@@ -439,29 +431,49 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			}
 		} else {
 			for (k = 1; k < components; k++) {
+				double bright1 = bright;
+
 				long long xk1 = x[k - 1];
 				long long xk = x[k];
 
+				if (gps) {
+					double xdist = (long long) x[k] - (long long) x[k - 1];
+					double ydist = (long long) y[k] - (long long) y[k - 1];
+					double dist = sqrt(xdist * xdist + ydist * ydist);
+
+					double min = 1600; // about 50 feet
+					// 1.5: pretty good
+					min = min * exp(log(1.5) * (16 - z_draw));
+
+					if (dist > min) {
+						bright1 /= (dist / min);
+					}
+
+					if (bright1 < 5) {
+						continue;
+					}
+				}
+
 				if (xk - xk1 >= (1LL << 31)) {
 					wxy2fxy(xk - (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright1);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 					wxy2fxy(xk1 + (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright1);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 				} else if (xk1 - xk >= (1LL << 31)) {
 					wxy2fxy(xk1 - (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright1);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 					wxy2fxy(xk + (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright1);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 				} else {
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, bright1);
 				}
 			}
 		}
@@ -472,7 +484,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t transparency] [-d] file z x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t transparency] [-dg] file z x y\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -483,8 +495,9 @@ int main(int argc, char **argv) {
 
 	int transparency = 224;
 	int dump = 0;
+	int gps = 0;
 
-	while ((i = getopt(argc, argv, "t:d")) != -1) {
+	while ((i = getopt(argc, argv, "t:dg")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -492,6 +505,10 @@ int main(int argc, char **argv) {
 
 		case 'd':
 			dump = 1;
+			break;
+
+		case 'g':
+			gps = 1;
 			break;
 
 		default:
@@ -538,7 +555,7 @@ int main(int argc, char **argv) {
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump);
+	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump, gps);
 
 	// Do the zoom levels numbered greater than this one.
 	//
@@ -554,7 +571,7 @@ int main(int argc, char **argv) {
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump, gps);
 		}
 	}
 
@@ -571,7 +588,7 @@ int main(int argc, char **argv) {
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, mapbits, metabits, dump, gps);
 		}
 	}
 
