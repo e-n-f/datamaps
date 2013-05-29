@@ -420,7 +420,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			}
 		} else if (components == 1) {
 			if (brush == 1) {
-				drawPixel(xd[0], yd[0], image, bright);
+				drawPixel(xd[0] - .5, yd[0] - .5, image, bright);
 			} else {
 				drawBrush(xd[0], yd[0], image, bright, brush);
 			}
