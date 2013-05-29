@@ -22,9 +22,9 @@ void out(unsigned char *buf, int width, int height) {
 	png_image_free(&image);
 }
 
-void putPixel(int x0, int y0, double add, double *image) {
+void putPixel(int x0, int y0, double bright, double *image) {
 	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
-		image[y0 * 256 + x0] += add;
+		image[y0 * 256 + x0] += bright;
 	}
 }
 
@@ -38,7 +38,7 @@ double rfpart(double x) {
 
 // loosely based on
 // http://en.wikipedia.org/wiki/Xiaolin_Wu's_line_algorithm
-void antialiasedLine(double x0, double y0, double x1, double y1, double *image, double add) {
+void antialiasedLine(double x0, double y0, double x1, double y1, double *image, double bright) {
 	int steep = fabs(y1 - y0) > fabs(x1 - x0);
 
 	if (steep) {
@@ -70,11 +70,11 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 		y0 = (y0 + y1) / 2;
 
 		if (steep) {
-			putPixel(y0,     x0, dx * rfpart(y0) * add, image);
-			putPixel(y0 + 1, x0, dx *  fpart(y0) * add, image);
+			putPixel(y0,     x0, dx * rfpart(y0) * bright, image);
+			putPixel(y0 + 1, x0, dx *  fpart(y0) * bright, image);
 		} else {
-			putPixel(x0, y0,     dx * rfpart(y0) * add, image);
-			putPixel(x0, y0 + 1, dx *  fpart(y0) * add, image);
+			putPixel(x0, y0,     dx * rfpart(y0) * bright, image);
+			putPixel(x0, y0 + 1, dx *  fpart(y0) * bright, image);
 		}
 
 		return;
@@ -85,11 +85,11 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 		double yy = y0 + .5 * rfpart(x0) * gradient;
 
 		if (steep) {
-			putPixel(yy,     x0, rfpart(x0) * rfpart(yy) * add, image);
-			putPixel(yy + 1, x0, rfpart(x0) *  fpart(yy) * add, image);
+			putPixel(yy,     x0, rfpart(x0) * rfpart(yy) * bright, image);
+			putPixel(yy + 1, x0, rfpart(x0) *  fpart(yy) * bright, image);
 		} else {
-			putPixel(x0, yy,     rfpart(x0) * rfpart(yy) * add, image);
-			putPixel(x0, yy + 1, rfpart(x0) *  fpart(yy) * add, image);
+			putPixel(x0, yy,     rfpart(x0) * rfpart(yy) * bright, image);
+			putPixel(x0, yy + 1, rfpart(x0) *  fpart(yy) * bright, image);
 		}
 
 		y0 += gradient * rfpart(x0);
@@ -101,11 +101,11 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 		double yy = y1 - .5 * fpart(x1) * gradient;
 
 		if (steep) {
-			putPixel(yy,     x1, fpart(x1) * rfpart(yy) * add, image);
-			putPixel(yy + 1, x1, fpart(x1) *  fpart(yy) * add, image);
+			putPixel(yy,     x1, fpart(x1) * rfpart(yy) * bright, image);
+			putPixel(yy + 1, x1, fpart(x1) *  fpart(yy) * bright, image);
 		} else {
-			putPixel(x1, yy,     fpart(x1) * rfpart(yy) * add, image);
-			putPixel(x1, yy + 1, fpart(x1) *  fpart(yy) * add, image);
+			putPixel(x1, yy,     fpart(x1) * rfpart(yy) * bright, image);
+			putPixel(x1, yy + 1, fpart(x1) *  fpart(yy) * bright, image);
 		}
 
 		y1 -= gradient * fpart(x1);
@@ -119,11 +119,11 @@ void antialiasedLine(double x0, double y0, double x1, double y1, double *image, 
 
 	for (; x0 < x1; x0++) {
 		if (steep) {
-			putPixel(y0,     x0, rfpart(y0) * add, image);
-			putPixel(y0 + 1, x0,  fpart(y0) * add, image);
+			putPixel(y0,     x0, rfpart(y0) * bright, image);
+			putPixel(y0 + 1, x0,  fpart(y0) * bright, image);
 		} else {
-			putPixel(x0, y0,     rfpart(y0) * add, image);
-			putPixel(x0, y0 + 1,  fpart(y0) * add, image);
+			putPixel(x0, y0,     rfpart(y0) * bright, image);
+			putPixel(x0, y0 + 1,  fpart(y0) * bright, image);
 		}
 
 		y0 += gradient;
@@ -162,7 +162,7 @@ int computeOutCode(double x, double y) {
 }
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
-void drawClip(double x0, double y0, double x1, double y1, double *image, double add) {
+void drawClip(double x0, double y0, double x1, double y1, double *image, double bright) {
 	int outcode0 = computeOutCode(x0, y0);
 	int outcode1 = computeOutCode(x1, y1);
 	int accept = 0;
@@ -212,7 +212,7 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, double 
 	}
 
 	if (accept) {
-		antialiasedLine(x0, y0, x1, y1, image, add);
+		antialiasedLine(x0, y0, x1, y1, image, bright);
 	}
 }
 
@@ -352,7 +352,8 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		start += bytes; // if not exact match, points to element before match
 	}
 
-	int step = 1, bright = 90, brush = 1;
+	int step = 1, brush = 1;
+	double bright = .045;
 	if (components == 1) {
 #define ALL 13
 		if (z_draw >= ALL) {
@@ -362,7 +363,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			step = 1 << (ALL - z_draw);
 		}
 	} else {
-		bright = 200; // looks good at zoom level 5
+		bright = 0.1; // looks good at zoom level 5
 
 		// 1.3 very bright in chicago
 		// 1.25 looks pretty good
@@ -449,7 +450,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 						bright1 /= (dist / min);
 					}
 
-					if (bright1 < 5) {
+					if (bright1 < .0025) {
 						continue;
 					}
 				}
@@ -598,7 +599,7 @@ int main(int argc, char **argv) {
 	int midg = 128;
 	int midb = 128;
 
-	double limit2 = 2000;
+	double limit2 = 1;
 	double limit = limit2 / 2;
 
 	for (i = 0; i < 256 * 256; i++) {
