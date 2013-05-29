@@ -353,7 +353,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 	}
 
 	int step = 1, brush = 1;
-	double bright = .045;
+	double bright = .015;
 	if (components == 1) {
 #define ALL 13
 		if (z_draw >= ALL) {
@@ -363,15 +363,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			step = 1 << (ALL - z_draw);
 		}
 	} else {
-		bright = 0.1; // looks good at zoom level 5
-
-		// 1.3 very bright in chicago
-		// 1.25 looks pretty good
-		// 1.2 only gets to f1 at z18
-		// 1.1 somewhat dim in chicago
-
-		// 1.23: z16 gets to f8
-		//       z17 gets a little beyond pure white
+		bright = 0.075; // looks good at zoom level 5
 
 		bright *= exp(log(1.23) * (z_draw - 5));
 	}
@@ -595,12 +587,14 @@ int main(int argc, char **argv) {
 
 	unsigned char img2[256 * 256 * 4];
 
-	int midr = 128; 
+	int midr = 128;
 	int midg = 128;
 	int midb = 128;
 
 	double limit2 = 1;
 	double limit = limit2 / 2;
+
+	double gamma = .5;
 
 	for (i = 0; i < 256 * 256; i++) {
 		if (image[i] == 0) {
@@ -609,6 +603,10 @@ int main(int argc, char **argv) {
 			img2[4 * i + 2] = 0;
 			img2[4 * i + 3] = transparency;
 		} else {
+			if (gamma != 1) {
+				image[i] = exp(log(image[i]) * gamma);
+			}
+
 			if (image[i] <= limit) {
 				img2[4 * i + 0] = midr * (image[i] / limit);
 				img2[4 * i + 1] = midg * (image[i] / limit);
