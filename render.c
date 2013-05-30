@@ -111,6 +111,10 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 					printf("%lf,%lf ", lat, lon);
 				}
 
+				if (metabits != 0) {
+					printf("%d:%d ", metabits, meta);
+				}
+
 				printf("// ");
 
 				for (k = 0; k < components; k++) {
