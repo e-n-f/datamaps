@@ -5,7 +5,51 @@
 #include <math.h>
 #include "util.h"
 
-void out(unsigned char *buf, int width, int height) {
+void out(double *src, int width, int height, int transparency) {
+	unsigned char buf[width * height * 4];
+
+	int midr = 128;
+	int midg = 128;
+	int midb = 128;
+
+	double limit2 = 1;
+	double limit = limit2 / 2;
+
+	double gamma = .5;
+
+	int i;
+	for (i = 0; i < width * height; i++) {
+		if (src[i] == 0) {
+			buf[4 * i + 0] = 0;
+			buf[4 * i + 1] = 0;
+			buf[4 * i + 2] = 0;
+			buf[4 * i + 3] = transparency;
+		} else {
+			if (gamma != 1) {
+				src[i] = exp(log(src[i]) * gamma);
+			}
+
+			if (src[i] <= limit) {
+				buf[4 * i + 0] = midr * (src[i] / limit);
+				buf[4 * i + 1] = midg * (src[i] / limit);
+				buf[4 * i + 2] = midb * (src[i] / limit);
+				buf[4 * i + 3] = 255 * (src[i] / limit) +
+						  transparency * (1 - (src[i] / limit));
+			} else if (src[i] <= limit2) {
+				double along = (src[i] - limit) / (limit2 - limit);
+				buf[4 * i + 0] = 255 * along + midr * (1 - along);
+				buf[4 * i + 1] = 255 * along + midg * (1 - along);
+				buf[4 * i + 2] = 255 * along + midb * (1 - along);
+				buf[4 * i + 3] = 255;
+			} else {
+				buf[4 * i + 0] = 255;
+				buf[4 * i + 1] = 255;
+				buf[4 * i + 2] = 255;
+				buf[4 * i + 3] = 255;
+			}
+		}
+	}
+
 	png_image image;
 
 	memset(&image, 0, sizeof image);

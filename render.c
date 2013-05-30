@@ -287,51 +287,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	unsigned char img2[256 * 256 * 4];
-
-	int midr = 128;
-	int midg = 128;
-	int midb = 128;
-
-	double limit2 = 1;
-	double limit = limit2 / 2;
-
-	double gamma = .5;
-
-	for (i = 0; i < 256 * 256; i++) {
-		if (image[i] == 0) {
-			img2[4 * i + 0] = 0;
-			img2[4 * i + 1] = 0;
-			img2[4 * i + 2] = 0;
-			img2[4 * i + 3] = transparency;
-		} else {
-			if (gamma != 1) {
-				image[i] = exp(log(image[i]) * gamma);
-			}
-
-			if (image[i] <= limit) {
-				img2[4 * i + 0] = midr * (image[i] / limit);
-				img2[4 * i + 1] = midg * (image[i] / limit);
-				img2[4 * i + 2] = midb * (image[i] / limit);
-				img2[4 * i + 3] = 255 * (image[i] / limit) +
-						  transparency * (1 - (image[i] / limit));
-			} else if (image[i] <= limit2) {
-				double along = (image[i] - limit) / (limit2 - limit);
-				img2[4 * i + 0] = 255 * along + midr * (1 - along);
-				img2[4 * i + 1] = 255 * along + midg * (1 - along);
-				img2[4 * i + 2] = 255 * along + midb * (1 - along);
-				img2[4 * i + 3] = 255;
-			} else {
-				img2[4 * i + 0] = 255;
-				img2[4 * i + 1] = 255;
-				img2[4 * i + 2] = 255;
-				img2[4 * i + 3] = 255;
-			}
-		}
-	}
-
 	if (!dump) {
-		out(img2, 256, 256);
+		out(image, 256, 256, transparency);
 	}
 
 	return 0;
