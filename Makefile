@@ -1,7 +1,7 @@
 all: encode render
 
 ENCODE_OBJS = encode.o util.o
-RENDER_OBJS = render.o util.o
+RENDER_OBJS = render.o util.o graphics.o
 
 encode: $(ENCODE_OBJS)
 	cc -g -Wall -O3 -o $@ $^ -lm
