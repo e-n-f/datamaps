@@ -347,8 +347,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 	end += bytes; // points to the last value in range; need the one after that
 
-	if (start != end && memcmp(start, end, bytes) != 0) {
-		// XXX is this true with meta bits?
+	if (memcmp(start, startbuf, bytes) < 0) {
 		start += bytes; // if not exact match, points to element before match
 	}
 
