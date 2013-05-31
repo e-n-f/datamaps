@@ -9,7 +9,7 @@
 #include "util.h"
 #include "graphics.h"
 
-void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, int *chroma, int mapbits, int metabits, int dump, int gps) {
+void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
 	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
@@ -78,6 +78,8 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 		buf2xys(start, mapbits, metabits, z_lookup, components, x, y, &meta);
 
+		double hue = meta / 3348.0;
+
 		for (k = 0; k < components; k++) {
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 		}
@@ -125,9 +127,9 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			}
 		} else if (components == 1) {
 			if (brush == 1) {
-				drawPixel(xd[0] - .5, yd[0] - .5, image, chroma, bright, meta);
+				drawPixel(xd[0] - .5, yd[0] - .5, image, cx, cy, bright, hue);
 			} else {
-				drawBrush(xd[0], yd[0], image, chroma, bright, brush, meta);
+				drawBrush(xd[0], yd[0], image, cx, cy, bright, brush, hue);
 			}
 		} else {
 			for (k = 1; k < components; k++) {
@@ -156,24 +158,24 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 				if (xk - xk1 >= (1LL << 31)) {
 					wxy2fxy(xk - (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, chroma, bright1, meta);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 					wxy2fxy(xk1 + (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, chroma, bright1, meta);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 				} else if (xk1 - xk >= (1LL << 31)) {
 					wxy2fxy(xk1 - (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, chroma, bright1, meta);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 					wxy2fxy(xk + (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, chroma, bright1, meta);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 				} else {
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, chroma, bright1, meta);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
 				}
 			}
 		}
@@ -248,16 +250,17 @@ int main(int argc, char **argv) {
 	int bytes = (mapbits + metabits + 7) / 8;
 
 	double image[256 * 256];
-	int chroma[256 * 256];
+	double cx[256 * 256], cy[256 * 256];
 	memset(image, 0, sizeof(image));
-	memset(image, 0, sizeof(chroma));
+	memset(image, 0, sizeof(cx));
+	memset(image, 0, sizeof(cy));
 
 	// Do the single-point case
 
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, chroma, mapbits, metabits, dump, gps);
+	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps);
 
 	// Do the zoom levels numbered greater than this one.
 	//
@@ -273,7 +276,7 @@ int main(int argc, char **argv) {
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, chroma, mapbits, metabits, dump, gps);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps);
 		}
 	}
 
@@ -290,12 +293,12 @@ int main(int argc, char **argv) {
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, chroma, mapbits, metabits, dump, gps);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps);
 		}
 	}
 
 	if (!dump) {
-		out(image, chroma, 256, 256, transparency);
+		out(image, cx, cy, 256, 256, transparency);
 	}
 
 	return 0;

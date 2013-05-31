@@ -5,7 +5,7 @@
 #include <math.h>
 #include "util.h"
 
-void out(double *src, int *chroma, int width, int height, int transparency) {
+void out(double *src, double *cx, double *cy, int width, int height, int transparency) {
 	unsigned char buf[width * height * 4];
 
 	int midr, midg, midb;
@@ -17,11 +17,14 @@ void out(double *src, int *chroma, int width, int height, int transparency) {
 
 	int i;
 	for (i = 0; i < width * height; i++) {
-		if (chroma[i] == 0) {
+		if (cx[i] == 0 || cy[i] == 0) {
 			midr = midg = midb = 128;
 		} else {
+			double h = atan2(cy[i], cx[i]);
+
+			// XXX do saturation
+
 			// http://basecase.org/env/on-rainbows
-			double h = chroma[i] / 3348.0;
 			h += .5;
 			h *= -1;
 			double r1 = sin(M_PI * h);
@@ -75,12 +78,13 @@ void out(double *src, int *chroma, int width, int height, int transparency) {
 	png_image_free(&image);
 }
 
-static void putPixel(int x0, int y0, double bright, double *image, int *chroma, int meta) {
+static void putPixel(int x0, int y0, double bright, double *image, double *cx, double *cy, double hue) {
 	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
 		image[y0 * 256 + x0] += bright;
 
-		if (bright > .0001) {
-			chroma[y0 * 256 + x0] = meta;
+		if (hue >= 0) {
+			cx[y0 * 256 + x0] += bright * cos(hue);
+			cy[y0 * 256 + x0] += bright * sin(hue);
 		}
 	}
 }
@@ -95,7 +99,7 @@ static double rfpart(double x) {
 
 // loosely based on
 // http://en.wikipedia.org/wiki/Xiaolin_Wu's_line_algorithm
-static void antialiasedLine(double x0, double y0, double x1, double y1, double *image, int *chroma, double bright, int meta) {
+static void antialiasedLine(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue) {
 	int steep = fabs(y1 - y0) > fabs(x1 - x0);
 
 	if (steep) {
@@ -127,11 +131,11 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 		y0 = (y0 + y1) / 2;
 
 		if (steep) {
-			putPixel(y0,     x0, dx * rfpart(y0) * bright, image, chroma, meta);
-			putPixel(y0 + 1, x0, dx *  fpart(y0) * bright, image, chroma, meta);
+			putPixel(y0,     x0, dx * rfpart(y0) * bright, image, cx, cy, hue);
+			putPixel(y0 + 1, x0, dx *  fpart(y0) * bright, image, cx, cy, hue);
 		} else {
-			putPixel(x0, y0,     dx * rfpart(y0) * bright, image, chroma, meta);
-			putPixel(x0, y0 + 1, dx *  fpart(y0) * bright, image, chroma, meta);
+			putPixel(x0, y0,     dx * rfpart(y0) * bright, image, cx, cy, hue);
+			putPixel(x0, y0 + 1, dx *  fpart(y0) * bright, image, cx, cy, hue);
 		}
 
 		return;
@@ -142,11 +146,11 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 		double yy = y0 + .5 * rfpart(x0) * gradient;
 
 		if (steep) {
-			putPixel(yy,     x0, rfpart(x0) * rfpart(yy) * bright, image, chroma, meta);
-			putPixel(yy + 1, x0, rfpart(x0) *  fpart(yy) * bright, image, chroma, meta);
+			putPixel(yy,     x0, rfpart(x0) * rfpart(yy) * bright, image, cx, cy, hue);
+			putPixel(yy + 1, x0, rfpart(x0) *  fpart(yy) * bright, image, cx, cy, hue);
 		} else {
-			putPixel(x0, yy,     rfpart(x0) * rfpart(yy) * bright, image, chroma, meta);
-			putPixel(x0, yy + 1, rfpart(x0) *  fpart(yy) * bright, image, chroma, meta);
+			putPixel(x0, yy,     rfpart(x0) * rfpart(yy) * bright, image, cx, cy, hue);
+			putPixel(x0, yy + 1, rfpart(x0) *  fpart(yy) * bright, image, cx, cy, hue);
 		}
 
 		y0 += gradient * rfpart(x0);
@@ -158,11 +162,11 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 		double yy = y1 - .5 * fpart(x1) * gradient;
 
 		if (steep) {
-			putPixel(yy,     x1, fpart(x1) * rfpart(yy) * bright, image, chroma, meta);
-			putPixel(yy + 1, x1, fpart(x1) *  fpart(yy) * bright, image, chroma, meta);
+			putPixel(yy,     x1, fpart(x1) * rfpart(yy) * bright, image, cx, cy, hue);
+			putPixel(yy + 1, x1, fpart(x1) *  fpart(yy) * bright, image, cx, cy, hue);
 		} else {
-			putPixel(x1, yy,     fpart(x1) * rfpart(yy) * bright, image, chroma, meta);
-			putPixel(x1, yy + 1, fpart(x1) *  fpart(yy) * bright, image, chroma, meta);
+			putPixel(x1, yy,     fpart(x1) * rfpart(yy) * bright, image, cx, cy, hue);
+			putPixel(x1, yy + 1, fpart(x1) *  fpart(yy) * bright, image, cx, cy, hue);
 		}
 
 		y1 -= gradient * fpart(x1);
@@ -176,11 +180,11 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 
 	for (; x0 < x1; x0++) {
 		if (steep) {
-			putPixel(y0,     x0, rfpart(y0) * bright, image, chroma, meta);
-			putPixel(y0 + 1, x0,  fpart(y0) * bright, image, chroma, meta);
+			putPixel(y0,     x0, rfpart(y0) * bright, image, cx, cy, hue);
+			putPixel(y0 + 1, x0,  fpart(y0) * bright, image, cx, cy, hue);
 		} else {
-			putPixel(x0, y0,     rfpart(y0) * bright, image, chroma, meta);
-			putPixel(x0, y0 + 1,  fpart(y0) * bright, image, chroma, meta);
+			putPixel(x0, y0,     rfpart(y0) * bright, image, cx, cy, hue);
+			putPixel(x0, y0 + 1,  fpart(y0) * bright, image, cx, cy, hue);
 		}
 
 		y0 += gradient;
@@ -219,7 +223,7 @@ static int computeOutCode(double x, double y) {
 }
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
-void drawClip(double x0, double y0, double x1, double y1, double *image, int *chroma, double bright, int meta) {
+void drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue) {
 	int outcode0 = computeOutCode(x0, y0);
 	int outcode1 = computeOutCode(x1, y1);
 	int accept = 0;
@@ -269,7 +273,7 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, int *ch
 	}
 
 	if (accept) {
-		antialiasedLine(x0, y0, x1, y1, image, chroma, bright, meta);
+		antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
 	}
 }
 
@@ -345,14 +349,14 @@ static unsigned char *brushes[] = {
 	brush1, brush1, brush2, brush3, brush4, brush5, brush6, brush7, brush8,
 };
 
-void drawPixel(double x, double y, double *image, int *chroma, double bright, int meta) {
-	putPixel(x,     y,     bright * rfpart(x) * rfpart(y), image, chroma, meta);
-	putPixel(x + 1, y,     bright *  fpart(x) * rfpart(y), image, chroma, meta);
-	putPixel(x,     y + 1, bright * rfpart(x) *  fpart(y), image, chroma, meta);
-	putPixel(x + 1, y + 1, bright *  fpart(x) *  fpart(y), image, chroma, meta);
+void drawPixel(double x, double y, double *image, double *cx, double *cy, double bright, double hue) {
+	putPixel(x,     y,     bright * rfpart(x) * rfpart(y), image, cx, cy, hue);
+	putPixel(x + 1, y,     bright *  fpart(x) * rfpart(y), image, cx, cy, hue);
+	putPixel(x,     y + 1, bright * rfpart(x) *  fpart(y), image, cx, cy, hue);
+	putPixel(x + 1, y + 1, bright *  fpart(x) *  fpart(y), image, cx, cy, hue);
 }
 
-void drawBrush(double x, double y, double *image, int *chroma, double bright, int brush, int meta) {
+void drawBrush(double x, double y, double *image, double *cx, double *cy, double bright, int brush, double hue) {
 	int nbrush = sizeof(brushes) / sizeof(brushes[0]);
 	while (brush >= nbrush) {
 		brush--;
@@ -364,7 +368,7 @@ void drawBrush(double x, double y, double *image, int *chroma, double bright, in
 	int xx, yy;
 	for (xx = 0; xx < width; xx++) {
 		for (yy = 0; yy < width; yy++) {
-			drawPixel(x + xx - width/2, y + yy - width/2, image, chroma, brushes[brush][1 + yy * width + xx] * bright / 255, meta);
+			drawPixel(x + xx - width/2, y + yy - width/2, image, cx, cy, brushes[brush][1 + yy * width + xx] * bright / 255, hue);
 		}
 	}
 }
