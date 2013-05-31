@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 	extern int optind;
 	extern char *optarg;
 
-	int maxzoom = 24;
+	int maxzoom = -1;
 
 	while ((i = getopt(argc, argv, "z:")) != -1) {
 		switch (i) {
@@ -73,12 +73,23 @@ int main(int argc, char **argv) {
 	}
 	fclose(f);
 
+	if (maxzoom < 0) {
+		maxzoom = mapbits / 2 - 8;
+	}
+
 	int bytes = (mapbits + metabits + 7) / 8;
 	char eof[bytes];
 	memset(eof, 0xFF, bytes);
 	gSortBytes = bytes;
 
-	struct file *files[(maxzoom + 1) * maxn];
+	int depth;
+	if (mapbits / 2 + 1 > maxzoom + 9) {
+		depth = mapbits / 2 + 1;
+	} else {
+		depth = maxzoom + 9;
+	}
+
+	struct file *files[depth * maxn];
 	int nfiles = 0;
 
 	int xtile[maxzoom + 1];
@@ -88,7 +99,7 @@ int main(int argc, char **argv) {
 	}
 
 	int z_lookup;
-	for (z_lookup = 0; z_lookup <= maxzoom && z_lookup <= mapbits / 2; z_lookup++) {
+	for (z_lookup = 0; z_lookup < depth; z_lookup++) {
 		for (i = 1; i <= maxn; i++) {
 			char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
 			sprintf(fn, "%s/%d,%d", fname, i, z_lookup);
