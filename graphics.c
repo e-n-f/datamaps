@@ -20,7 +20,7 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 		if (cx[i] == 0 && cy[i] == 0) {
 			midr = midg = midb = 128;
 		} else {
-			double h = atan2(cy[i], cx[i]);
+			double h = atan2(cy[i], cx[i]) / (2 * M_PI);
 			double sat = 0;
 
 			if (src[i] != 0) {
@@ -86,8 +86,8 @@ static void putPixel(int x0, int y0, double bright, double *image, double *cx, d
 		image[y0 * 256 + x0] += bright;
 
 		if (hue >= 0) {
-			cx[y0 * 256 + x0] += bright * cos(hue);
-			cy[y0 * 256 + x0] += bright * sin(hue);
+			cx[y0 * 256 + x0] += bright * cos(hue * 2 * M_PI);
+			cy[y0 * 256 + x0] += bright * sin(hue * 2 * M_PI);
 		}
 	}
 }
