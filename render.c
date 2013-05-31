@@ -9,7 +9,7 @@
 #include "util.h"
 #include "graphics.h"
 
-void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps) {
+void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
 	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
@@ -79,8 +79,8 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		buf2xys(start, mapbits, metabits, z_lookup, components, x, y, &meta);
 
 		double hue = -1;
-		if (metabits > 0) {
-			hue = meta / 3348.0;
+		if (metabits > 0 && colors > 0) {
+			hue = (double) meta / colors;
 		}
 
 		for (k = 0; k < components; k++) {
@@ -189,7 +189,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t transparency] [-dg] file z x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t transparency] [-dg] [-C colors] file z x y\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -201,8 +201,9 @@ int main(int argc, char **argv) {
 	int transparency = 224;
 	int dump = 0;
 	int gps = 0;
+	int colors = 0;
 
-	while ((i = getopt(argc, argv, "t:dg")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -214,6 +215,10 @@ int main(int argc, char **argv) {
 
 		case 'g':
 			gps = 1;
+			break;
+
+		case 'C':
+			colors = atoi(optarg);
 			break;
 
 		default:
@@ -263,7 +268,7 @@ int main(int argc, char **argv) {
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps);
+	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
 
 	// Do the zoom levels numbered greater than this one.
 	//
@@ -279,7 +284,7 @@ int main(int argc, char **argv) {
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
 		}
 	}
 
@@ -296,7 +301,7 @@ int main(int argc, char **argv) {
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
 		}
 	}
 
