@@ -78,7 +78,10 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 		buf2xys(start, mapbits, metabits, z_lookup, components, x, y, &meta);
 
-		double hue = meta / 3348.0;
+		double hue = -1;
+		if (metabits > 0) {
+			hue = meta / 3348.0;
+		}
 
 		for (k = 0; k < components; k++) {
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);

@@ -17,12 +17,15 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 
 	int i;
 	for (i = 0; i < width * height; i++) {
-		if (cx[i] == 0 || cy[i] == 0) {
+		if (cx[i] == 0 && cy[i] == 0) {
 			midr = midg = midb = 128;
 		} else {
 			double h = atan2(cy[i], cx[i]);
+			double sat = 0;
 
-			// XXX do saturation
+			if (src[i] != 0) {
+				sat = sqrt(cx[i] * cx[i] + cy[i] * cy[i]) / src[i];
+			}
 
 			// http://basecase.org/env/on-rainbows
 			h += .5;
@@ -30,9 +33,9 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			double r1 = sin(M_PI * h);
 			double g1 = sin(M_PI * (h + 1.0/3));
 			double b1 = sin(M_PI * (h + 2.0/3));
-			midr = 255 * (r1 * r1);
-			midg = 255 * (g1 * g1);
-			midb = 255 * (b1 * b1);
+			midr = 255 * (r1 * r1) * sat + 128 * (1 - sat);
+			midg = 255 * (g1 * g1) * sat + 128 * (1 - sat);
+			midb = 255 * (b1 * b1) * sat + 128 * (1 - sat);
 		}
 
 		if (src[i] == 0) {
