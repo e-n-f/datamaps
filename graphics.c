@@ -5,15 +5,13 @@
 #include <math.h>
 #include "util.h"
 
-void out(double *src, double *cx, double *cy, int width, int height, int transparency) {
+void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma) {
 	unsigned char buf[width * height * 4];
 
 	int midr, midg, midb;
 
 	double limit2 = 1;
 	double limit = limit2 / 2;
-
-	double gamma = .5;
 
 	int i;
 	for (i = 0; i < width * height; i++) {

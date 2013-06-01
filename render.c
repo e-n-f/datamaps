@@ -9,6 +9,20 @@
 #include "util.h"
 #include "graphics.h"
 
+int dot_base = 13;
+double dot_bright = 0.05917;
+double dot_ramp = 1.3;
+
+int line_base = 5;
+double line_bright = 0.075;
+double line_ramp = 1.23;
+
+int gps_base = 16;
+double gps_dist = 1600; // about 50 feet
+double gps_ramp = 1.5;
+
+double display_gamma = .5;
+
 void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
@@ -49,21 +63,21 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 	}
 
 	int step = 1, brush = 1;
-	double bright = .1;
+	double bright;
 	if (components == 1) {
-#define ALL 13
-		if (z_draw >= ALL) {
+		bright = dot_bright;
+
+		if (z_draw >= dot_base) {
 			step = 1;
-			brush = z_draw - ALL + 1;
+			brush = z_draw - dot_base + 1;
 		} else {
-			step = 1 << (ALL - z_draw);
+			step = 1 << (dot_base - z_draw);
 		}
 
-		bright *= exp(log(1.3) * (z_draw - 15));
+		bright *= exp(log(dot_ramp) * (z_draw - dot_base));
 	} else {
-		bright = 0.075; // looks good at zoom level 5
-
-		bright *= exp(log(1.23) * (z_draw - 5));
+		bright = line_bright;
+		bright *= exp(log(line_ramp) * (z_draw - line_base));
 	}
 
 	if (dump) {
@@ -146,9 +160,8 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 					double ydist = (long long) y[k] - (long long) y[k - 1];
 					double dist = sqrt(xdist * xdist + ydist * ydist);
 
-					double min = 1600; // about 50 feet
-					// 1.5: pretty good
-					min = min * exp(log(1.5) * (16 - z_draw));
+					double min = gps_dist;
+					min = min * exp(log(gps_ramp) * (gps_base - z_draw));
 
 					if (dist > min) {
 						bright1 /= (dist / min);
@@ -189,7 +202,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t transparency] [-dg] [-C colors] file z x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t transparency] [-dg] [-C colors] [-D dot] [-L line] [-G gamma] [-O offset] file z x y\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -203,7 +216,7 @@ int main(int argc, char **argv) {
 	int gps = 0;
 	int colors = 0;
 
-	while ((i = getopt(argc, argv, "t:dgC:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:D:L:G:O:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -219,6 +232,30 @@ int main(int argc, char **argv) {
 
 		case 'C':
 			colors = atoi(optarg);
+			break;
+
+		case 'D':
+			if (sscanf(optarg, "%d:%lf:%lf", &dot_base, &dot_bright, &dot_ramp) != 3) {
+				usage(argv);
+			}
+			break;
+
+		case 'L':
+			if (sscanf(optarg, "%d:%lf:%lf", &line_base, &line_bright, &line_ramp) != 3) {
+				usage(argv);
+			}
+			break;
+
+		case 'O':
+			if (sscanf(optarg, "%d:%lf:%lf", &gps_base, &gps_dist, &gps_ramp) != 3) {
+				usage(argv);
+			}
+			break;
+
+		case 'G':
+			if (sscanf(optarg, "%lf", &display_gamma) != 1) {
+				usage(argv);
+			}
 			break;
 
 		default:
@@ -306,7 +343,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (!dump) {
-		out(image, cx, cy, 256, 256, transparency);
+		out(image, cx, cy, 256, 256, transparency, display_gamma);
 	}
 
 	return 0;
