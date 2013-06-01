@@ -17,11 +17,12 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 
 	int i;
 	for (i = 0; i < width * height; i++) {
+		double sat = 0;
+
 		if (cx[i] == 0 && cy[i] == 0) {
 			midr = midg = midb = 128;
 		} else {
 			double h = atan2(cy[i], cx[i]) / (2 * M_PI);
-			double sat = 0;
 
 			if (src[i] != 0) {
 				sat = sqrt(cx[i] * cx[i] + cy[i] * cy[i]) / src[i];
@@ -46,6 +47,13 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 		} else {
 			if (gamma != 1) {
 				src[i] = exp(log(src[i]) * gamma);
+			}
+
+			if (sat != 0) {
+#define COLOR_CAP .90
+				if (src[i] > limit2 * COLOR_CAP) {
+					src[i] = limit2 * COLOR_CAP;
+				}
 			}
 
 			if (src[i] <= limit) {

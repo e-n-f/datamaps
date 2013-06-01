@@ -59,7 +59,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			step = 1 << (ALL - z_draw);
 		}
 
-		bright *= exp(log(1.4) * (z_draw - 15));
+		bright *= exp(log(1.3) * (z_draw - 15));
 	} else {
 		bright = 0.075; // looks good at zoom level 5
 
