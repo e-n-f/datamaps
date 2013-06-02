@@ -23,6 +23,9 @@ double gps_ramp = 1.5;
 
 double display_gamma = .5;
 
+int antialias = 1;
+double mercator = -1;
+
 void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
@@ -63,9 +66,9 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 	}
 
 	int step = 1, brush = 1;
-	double bright;
+	double bright1;
 	if (components == 1) {
-		bright = dot_bright;
+		bright1 = dot_bright;
 
 		if (z_draw >= dot_base) {
 			step = 1;
@@ -74,10 +77,10 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 			step = 1 << (dot_base - z_draw);
 		}
 
-		bright *= exp(log(dot_ramp) * (z_draw - dot_base));
+		bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
 	} else {
-		bright = line_bright;
-		bright *= exp(log(line_ramp) * (z_draw - line_base));
+		bright1 = line_bright;
+		bright1 *= exp(log(line_ramp) * (z_draw - line_base));
 	}
 
 	if (dump) {
@@ -95,6 +98,15 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		double hue = -1;
 		if (metabits > 0 && colors > 0) {
 			hue = (double) meta / colors;
+		}
+
+		double bright = bright1;
+		if (mercator >= 0) {
+			double lat, lon;
+			tile2latlon(x[0], y[0], 32, &lat, &lon);
+			double rat = cos(lat * M_PI / 180);
+			double base = cos(mercator * M_PI / 180);
+			bright /= rat * rat / (base * base);
 		}
 
 		for (k = 0; k < components; k++) {
@@ -143,6 +155,11 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 				printf("\n");
 			}
 		} else if (components == 1) {
+			if (!antialias) {
+				xd[0] = (int) xd[0] + .5;
+				yd[0] = (int) yd[0] + .5;
+			}
+
 			if (brush == 1) {
 				drawPixel(xd[0] - .5, yd[0] - .5, image, cx, cy, bright, hue);
 			} else {
@@ -174,24 +191,24 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 				if (xk - xk1 >= (1LL << 31)) {
 					wxy2fxy(xk - (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 					wxy2fxy(xk1 + (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 				} else if (xk1 - xk >= (1LL << 31)) {
 					wxy2fxy(xk1 - (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 					wxy2fxy(xk + (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 				} else {
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
 				}
 			}
 		}
@@ -202,7 +219,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t transparency] [-dg] [-C colors] [-D dot] [-L line] [-G gamma] [-O offset] file z x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t transparency] [-dga] [-C colors] [-D dot] [-L line] [-G gamma] [-O offset] [-M latitude] file z x y\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -216,7 +233,7 @@ int main(int argc, char **argv) {
 	int gps = 0;
 	int colors = 0;
 
-	while ((i = getopt(argc, argv, "t:dgC:D:L:G:O:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:D:L:G:O:M:a")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -254,6 +271,16 @@ int main(int argc, char **argv) {
 
 		case 'G':
 			if (sscanf(optarg, "%lf", &display_gamma) != 1) {
+				usage(argv);
+			}
+			break;
+
+		case 'a':
+			antialias = 0;
+			break;
+
+		case 'M':
+			if (sscanf(optarg, "%lf", &mercator) != 1) {
 				usage(argv);
 			}
 			break;

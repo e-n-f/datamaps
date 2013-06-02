@@ -200,6 +200,31 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 	}
 }
 
+// http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
+void drawLine(int x0, int y0, int x1, int y1, double *image, double *cx, double *cy, double bright, double hue) {
+	int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
+	int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
+	int err = ((dx > dy) ? dx : -dy) / 2, e2;
+
+	while (1) {
+		if (x0 == x1 && y0 == y1) {
+			break;
+		}
+
+		putPixel(x0, y0, bright, image, cx, cy, hue);
+
+		e2 = err;
+		if (e2 > -dx) { 
+			err -= dy;
+			x0 += sx;
+		}
+		if (e2 <  dy) {
+			err += dx;
+			y0 += sy;
+		}
+	}
+}
+
 #define INSIDE 0
 #define LEFT 1
 #define RIGHT 2
@@ -232,7 +257,7 @@ static int computeOutCode(double x, double y) {
 }
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
-void drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue) {
+void drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias) {
 	int outcode0 = computeOutCode(x0, y0);
 	int outcode1 = computeOutCode(x1, y1);
 	int accept = 0;
@@ -282,7 +307,11 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, double 
 	}
 
 	if (accept) {
-		antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+		if (antialias) {
+			antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+		} else {
+			drawLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+		}
 	}
 }
 
