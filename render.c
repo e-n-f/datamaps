@@ -86,11 +86,13 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 	if (dump) {
 		step = 1;
-	}
-
-	while ((end - start) / (step * bytes) > 256 * 1024) {
-		step *= 2;
-		bright1 *= 2;
+	} else {
+		if (components == 1) {
+			while ((end - start) / (step * bytes) > 256 * 1024) {
+				step *= 2;
+				bright1 *= 2;
+			}
+		}
 	}
 
 	for (; start < end; start += step * bytes) {
