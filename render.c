@@ -88,6 +88,11 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		step = 1;
 	}
 
+	while ((end - start) / (step * bytes) > 256 * 1024) {
+		step *= 2;
+		bright1 *= 2;
+	}
+
 	for (; start < end; start += step * bytes) {
 		unsigned int x[components], y[components];
 		double xd[components], yd[components];
