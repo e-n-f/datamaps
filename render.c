@@ -25,6 +25,7 @@ double display_gamma = .5;
 
 int antialias = 1;
 double mercator = -1;
+int multiplier = 1;
 
 void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
@@ -72,9 +73,9 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 		if (z_draw >= dot_base) {
 			step = 1;
-			brush = z_draw - dot_base + 1;
+			brush = multiplier * (z_draw - dot_base) + 1;
 		} else {
-			step = 1 << (dot_base - z_draw);
+			step = 1 << (multiplier * (dot_base - z_draw));
 		}
 
 		bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
@@ -233,7 +234,7 @@ int main(int argc, char **argv) {
 	int gps = 0;
 	int colors = 0;
 
-	while ((i = getopt(argc, argv, "t:dgC:D:L:G:O:M:a")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:D:L:G:O:M:a4")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -283,6 +284,10 @@ int main(int argc, char **argv) {
 			if (sscanf(optarg, "%lf", &mercator) != 1) {
 				usage(argv);
 			}
+			break;
+
+		case '4':
+			multiplier = 2;
 			break;
 
 		default:
