@@ -27,6 +27,8 @@ int antialias = 1;
 double mercator = -1;
 int multiplier = 1;
 
+void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn);
+
 void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 
@@ -221,6 +223,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 void usage(char **argv) {
 	fprintf(stderr, "Usage: %s [-t transparency] [-dga] [-C colors] [-D dot] [-L line] [-G gamma] [-O offset] [-M latitude] file z x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s -A [-t transparency] [-dga] [-C colors] [-D dot] [-L line] [-G gamma] [-O offset] [-M latitude] file z minlat minlon maxlat maxlon\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -233,8 +236,9 @@ int main(int argc, char **argv) {
 	int dump = 0;
 	int gps = 0;
 	int colors = 0;
+	int assemble = 0;
 
-	while ((i = getopt(argc, argv, "t:dgC:D:L:G:O:M:a4")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:D:L:G:O:M:a4A")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -290,19 +294,27 @@ int main(int argc, char **argv) {
 			multiplier = 2;
 			break;
 
+		case 'A':
+			assemble = 1;
+			break;
+
 		default:
 			usage(argv);
 		}
 	}
 
-	if (argc - optind != 4) {
-		usage(argv);
+	if (assemble) {
+		if (argc - optind != 6) {
+			usage(argv);
+		}
+	} else {
+		if (argc - optind != 4) {
+			usage(argv);
+		}
 	}
 
 	char *fname = argv[optind];
 	unsigned int z_draw = atoi(argv[optind + 1]);
-	unsigned int x_draw = atoi(argv[optind + 2]);
-	unsigned int y_draw = atoi(argv[optind + 3]);
 
 	char meta[strlen(fname) + 1 + 4 + 1];
 	sprintf(meta, "%s/meta", fname);
@@ -328,9 +340,78 @@ int main(int argc, char **argv) {
 
 	double image[256 * 256];
 	double cx[256 * 256], cy[256 * 256];
-	memset(image, 0, sizeof(image));
-	memset(image, 0, sizeof(cx));
-	memset(image, 0, sizeof(cy));
+
+	if (assemble) {
+		unsigned x1, y1, x2, y2;
+
+		latlon2tile(atof(argv[optind + 2]), atof(argv[optind + 3]), z_draw, &x1, &y1);
+		latlon2tile(atof(argv[optind + 4]), atof(argv[optind + 5]), z_draw, &x2, &y2);
+
+		if (x1 > x2) {
+			unsigned t = x2;
+			x2 = x1;
+			x1 = t;
+		}
+
+		if (y1 > y2) {
+			unsigned t = y2;
+			y2 = y1;
+			y1 = t;
+		}
+
+		fprintf(stderr, "making zoom %u: %u/%u to %u/%u\n", z_draw, x1, y1, x2, y2);
+
+		int stride = (x2 - x1 + 1) * 256;
+		double *image2 = malloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
+		double *cx2 = malloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
+		double *cy2 = malloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
+
+		unsigned int x, y;
+		for (x = x1; x <= x2; x++) {
+			for (y = y1; y <= y2; y++) {
+				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
+
+				do_tile(image, cx, cy, z_draw, x, y, bytes, colors, fname, mapbits, metabits, gps, dump, maxn);
+
+				int xx, yy;
+				for (xx = 0; xx < 256; xx++) {
+					for (yy = 0; yy < 256; yy++) {
+						image2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
+							image[256 * yy + xx];
+						cx2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
+							cx[256 * yy + xx];
+						cy2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
+							cy[256 * yy + xx];
+					}
+				}
+			}
+		}
+
+		if (!dump) {
+			fprintf(stderr, "output: %d by %d\n", 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1));
+			out(image2, cx2, cy2, 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1), transparency, display_gamma);
+		}
+	} else {
+		unsigned int x_draw = atoi(argv[optind + 2]);
+		unsigned int y_draw = atoi(argv[optind + 3]);
+
+		do_tile(image, cx, cy, z_draw, x_draw, y_draw, bytes, colors, fname, mapbits, metabits, gps, dump, maxn);
+
+		if (!dump) {
+			out(image, cx, cy, 256, 256, transparency, display_gamma);
+		}
+	}
+
+	return 0;
+}
+
+void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw,
+		int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn) {
+	int i;
+
+	memset(image, 0, 256 * 256 * sizeof(double));
+	memset(cx, 0, 256 * 256 * sizeof(double));
+	memset(cy, 0, 256 * 256 * sizeof(double));
 
 	// Do the single-point case
 
@@ -374,9 +455,4 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (!dump) {
-		out(image, cx, cy, 256, 256, transparency, display_gamma);
-	}
-
-	return 0;
 }

@@ -44,6 +44,16 @@ to make a PNG-format map tile of the data.
 (You need more data if you want your tile to have more than
 just one pixel on it though.)
 
+Alternately, if you want an image for a particular area of the
+earth instead of just one tile, you can do
+
+    ./render -A -- directoryname zoom minlat minlon maxlat maxlon > foo.png
+
+The bounds of the image will be rounded up to tile boundaries for
+the zoom level you specified.  The "--" is because otherwise
+<code>getopt</code> will complain about negative numbers in
+the latitudes or longitudes.
+
 The point indexing is inspired by Brandon Martin-Anderson's
 <a href="http://bmander.com/dotmap/index.html#13.00/37.7733/-122.4265">
 Census Dotmap</a>.  The vector indexing is along similar lines but uses a

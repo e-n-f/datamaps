@@ -6,7 +6,7 @@
 #include "util.h"
 
 void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma) {
-	unsigned char buf[width * height * 4];
+	unsigned char *buf = malloc(width * height * 4);
 
 	int midr, midg, midb;
 
@@ -85,6 +85,8 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 
 	png_image_write_to_stdio(&image, stdout, 0, buf, 4 * width, NULL);
 	png_image_free(&image);
+
+	free(buf);
 }
 
 static void putPixel(int x0, int y0, double bright, double *image, double *cx, double *cy, double hue) {
