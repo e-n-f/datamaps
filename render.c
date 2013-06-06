@@ -221,6 +221,16 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 	close(fd);
 }
 
+void *fmalloc(size_t size) {
+	void *p = malloc(size);
+	if (p == NULL) {
+		perror("malloc");
+		exit(EXIT_FAILURE);
+	}
+
+	return p;
+}
+
 void usage(char **argv) {
 	fprintf(stderr, "Usage: %s [-t transparency] [-dga] [-C colors] [-D dot] [-L line] [-G gamma] [-O offset] [-M latitude] file z x y\n", argv[0]);
 	fprintf(stderr, "Usage: %s -A [-t transparency] [-dga] [-C colors] [-D dot] [-L line] [-G gamma] [-O offset] [-M latitude] file z minlat minlon maxlat maxlon\n", argv[0]);
@@ -360,11 +370,21 @@ int main(int argc, char **argv) {
 		}
 
 		fprintf(stderr, "making zoom %u: %u/%u to %u/%u\n", z_draw, x1, y1, x2, y2);
+		fprintf(stderr, "that's %d by %d\n", 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1));
 
 		int stride = (x2 - x1 + 1) * 256;
-		double *image2 = malloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
-		double *cx2 = malloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
-		double *cy2 = malloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
+		double *image2 = NULL, *cx2 = NULL, *cy2 = NULL;
+
+		if (!dump) {
+			if (stride * (y2 - y1 + 1) * 256 > 10000 * 10000) {
+				fprintf(stderr, "Image too big\n");
+				exit(EXIT_FAILURE);
+			}
+
+			image2 = fmalloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
+			cx2 = fmalloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
+			cy2 = fmalloc((y2 - y1 + 1) * 256 * stride * sizeof(double));
+		}
 
 		unsigned int x, y;
 		for (x = x1; x <= x2; x++) {
