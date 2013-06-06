@@ -373,15 +373,17 @@ int main(int argc, char **argv) {
 
 				do_tile(image, cx, cy, z_draw, x, y, bytes, colors, fname, mapbits, metabits, gps, dump, maxn);
 
-				int xx, yy;
-				for (xx = 0; xx < 256; xx++) {
-					for (yy = 0; yy < 256; yy++) {
-						image2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
-							image[256 * yy + xx];
-						cx2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
-							cx[256 * yy + xx];
-						cy2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
-							cy[256 * yy + xx];
+				if (!dump) {
+					int xx, yy;
+					for (xx = 0; xx < 256; xx++) {
+						for (yy = 0; yy < 256; yy++) {
+							image2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
+								image[256 * yy + xx];
+							cx2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
+								cx[256 * yy + xx];
+							cy2[stride * (256 * (y - y1) + yy) + (256 * (x - x1) + xx)] =
+								cy[256 * yy + xx];
+						}
 					}
 				}
 			}
