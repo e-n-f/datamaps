@@ -13,8 +13,8 @@ int dot_base = 13;
 double dot_bright = 0.05917;
 double dot_ramp = 1.3;
 
-int line_base = 5;
-double line_bright = 0.075;
+int line_base = 13;
+double line_bright = 0.3929;
 double line_ramp = 1.23;
 
 int gps_base = 16;
