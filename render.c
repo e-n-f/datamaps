@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
 	extern int optind;
 	extern char *optarg;
 
-	int transparency = 224;
+	int transparency = 255;
 	int dump = 0;
 	int gps = 0;
 	int colors = 0;
