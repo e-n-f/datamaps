@@ -5,6 +5,10 @@
 #include <math.h>
 #include "util.h"
 
+#if PNG_LIBPNG_VER < 10600
+#error libpng >= 1.6 is required
+#endif
+
 void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma) {
 	unsigned char *buf = malloc(width * height * 4);
 
