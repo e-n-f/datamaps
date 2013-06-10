@@ -1,7 +1,7 @@
 all: encode render enumerate
 
-PNG_CFLAGS=$(shell pkg-config libpng --cflags)
-PNG_LDFLAGS=$(shell pkg-config libpng --libs)
+PNG_CFLAGS=$(shell pkg-config libpng16 --cflags)
+PNG_LDFLAGS=$(shell pkg-config libpng16 --libs)
 
 ENCODE_OBJS = encode.o util.o
 RENDER_OBJS = render.o util.o graphics.o
