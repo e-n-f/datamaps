@@ -10,7 +10,7 @@
 #error libpng >= 1.6 is required
 #endif
 
-void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert) {
+void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color) {
 	unsigned char *buf = malloc(width * height * 4);
 
 	int midr, midg, midb;
@@ -18,12 +18,25 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	double limit2 = 1;
 	double limit = limit2 / 2;
 
+	int r, g, b;
+	if (color < 0) {
+		r = 128;
+		g = 128;
+		b = 128;
+	} else {
+		r = (color >> 16) & 0xFF;
+		g = (color >>  8) & 0xFF;
+		b = (color >>  0) & 0xFF;
+	}
+
 	int i;
 	for (i = 0; i < width * height; i++) {
 		double sat = 0;
 
 		if (cx[i] == 0 && cy[i] == 0) {
-			midr = midg = midb = 128;
+			midr = r;
+			midg = g;
+			midb = b;
 		} else {
 			double h = atan2(cy[i], cx[i]) / (2 * M_PI);
 
@@ -37,9 +50,9 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			double r1 = sin(M_PI * h);
 			double g1 = sin(M_PI * (h + 1.0/3));
 			double b1 = sin(M_PI * (h + 2.0/3));
-			midr = 255 * (r1 * r1) * sat + 128 * (1 - sat);
-			midg = 255 * (g1 * g1) * sat + 128 * (1 - sat);
-			midb = 255 * (b1 * b1) * sat + 128 * (1 - sat);
+			midr = 255 * (r1 * r1) * sat + r * (1 - sat);
+			midg = 255 * (g1 * g1) * sat + g * (1 - sat);
+			midb = 255 * (b1 * b1) * sat + b * (1 - sat);
 		}
 
 		int fg = 255;
