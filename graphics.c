@@ -4,12 +4,13 @@
 #include <png.h>
 #include <math.h>
 #include "util.h"
+#include "graphics.h"
 
 #if PNG_LIBPNG_VER < 10600
 #error libpng >= 1.6 is required
 #endif
 
-void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma) {
+void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert) {
 	unsigned char *buf = malloc(width * height * 4);
 
 	int midr, midg, midb;
@@ -41,10 +42,18 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			midb = 255 * (b1 * b1) * sat + 128 * (1 - sat);
 		}
 
+		int fg = 255;
+		int bg = 0;
+
+		if (invert) {
+			bg = 255;
+			fg = 0;
+		}
+
 		if (src[i] == 0) {
-			buf[4 * i + 0] = 0;
-			buf[4 * i + 1] = 0;
-			buf[4 * i + 2] = 0;
+			buf[4 * i + 0] = bg;
+			buf[4 * i + 1] = bg;
+			buf[4 * i + 2] = bg;
 			buf[4 * i + 3] = transparency;
 		} else {
 			if (gamma != 1) {
@@ -59,21 +68,22 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			}
 
 			if (src[i] <= limit) {
-				buf[4 * i + 0] = midr * (src[i] / limit);
-				buf[4 * i + 1] = midg * (src[i] / limit);
-				buf[4 * i + 2] = midb * (src[i] / limit);
+				double along = src[i] / limit;
+				buf[4 * i + 0] = midr * along + bg * (1 - along);
+				buf[4 * i + 1] = midg * along + bg * (1 - along);
+				buf[4 * i + 2] = midb * along + bg * (1 - along);
 				buf[4 * i + 3] = 255 * (src[i] / limit) +
 						  transparency * (1 - (src[i] / limit));
 			} else if (src[i] <= limit2) {
 				double along = (src[i] - limit) / (limit2 - limit);
-				buf[4 * i + 0] = 255 * along + midr * (1 - along);
-				buf[4 * i + 1] = 255 * along + midg * (1 - along);
-				buf[4 * i + 2] = 255 * along + midb * (1 - along);
+				buf[4 * i + 0] = fg * along + midr * (1 - along);
+				buf[4 * i + 1] = fg * along + midg * (1 - along);
+				buf[4 * i + 2] = fg * along + midb * (1 - along);
 				buf[4 * i + 3] = 255;
 			} else {
-				buf[4 * i + 0] = 255;
-				buf[4 * i + 1] = 255;
-				buf[4 * i + 2] = 255;
+				buf[4 * i + 0] = fg;
+				buf[4 * i + 1] = fg;
+				buf[4 * i + 2] = fg;
 				buf[4 * i + 3] = 255;
 			}
 		}
