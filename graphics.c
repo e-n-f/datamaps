@@ -286,7 +286,7 @@ static int computeOutCode(double x, double y) {
 }
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
-void drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias) {
+int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias) {
 	int outcode0 = computeOutCode(x0, y0);
 	int outcode1 = computeOutCode(x1, y1);
 	int accept = 0;
@@ -336,12 +336,18 @@ void drawClip(double x0, double y0, double x1, double y1, double *image, double 
 	}
 
 	if (accept) {
-		if (antialias) {
-			antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
-		} else {
-			drawLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+		if (image != NULL) {
+			if (antialias) {
+				antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+			} else {
+				drawLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+			}
 		}
+
+		return 1;
 	}
+
+	return 0;
 }
 
 static unsigned char brush1[] = { 1, 0xFF };

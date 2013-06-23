@@ -115,27 +115,20 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		}
 
 		if (dump) {
-			// XXX should we clip
-			// instead of just excluding based on bounding box?
+			int should = 0;
 
-			int above = 1, below = 1, left = 1, right = 1;
-
-			for (k = 0; k < components; k++) {
-				if (xd[k] >= 0) {
-					left = 0;
-				}
-				if (xd[k] <= 256) {
-					right = 0;
-				}
-				if (yd[k] >= 0) {
-					above = 0;
-				}
-				if (yd[k] <= 256) {
-					below = 0;
+			if (components == 1) {
+				should = 1;
+			} else {
+				for (k = 1; k < components; k++) {
+					if (drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], NULL, NULL, NULL, 0, 0, 0)) {
+						should = 1;
+						break;
+					}
 				}
 			}
 
-			if (! (above || below || left || right)) {
+			if (should) {
 				for (k = 0; k < components; k++) {
 					double lat, lon;
 					tile2latlon(x[k], y[k], 32, &lat, &lon);
