@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <stddef.h>
 #include <math.h>
 #include "util.h"
 #include "graphics.h"
@@ -86,6 +87,9 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 	if (dump) {
 		step = 1;
+	} else {
+		// Align to step size so each zoom is a superset of the previous
+		start = (start - map) / (step * bytes) * (step * bytes) + map;
 	}
 
 	for (; start < end; start += step * bytes) {
