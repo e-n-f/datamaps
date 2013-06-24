@@ -449,6 +449,11 @@ void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigne
 		if (y_draw > 0) {
 			zxy2bufs(z_draw, x_draw, y_draw - 1, startbuf, endbuf, bytes);
 			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+
+			if (x_draw > 0) {
+				zxy2bufs(z_draw, x_draw - 1, y_draw - 1, startbuf, endbuf, bytes);
+				process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+			}
 		}
 	}
 
