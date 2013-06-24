@@ -379,6 +379,11 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 		unsigned char *temp = malloc(bigwidth * bigwidth);
 		memset(temp, '\0', bigwidth * bigwidth);
 
+		int off = 0;
+		if (brush == 2) {
+			off = MULT * .5;
+		}
+
 		int xa;
 		for (xa = 0; xa < 2 * radius; xa++) {
 			double dx = acos((xa - radius) / radius);
@@ -386,8 +391,11 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 
 			int ya;
 			for (ya = radius - yy; ya < radius + yy; ya++) {
-				if (ya >= 0 && ya < bigwidth) {
-					temp[bigwidth * ya + xa] = 1;
+				int y1 = ya - off;
+				int x1 = xa - off;
+
+				if (y1 >= 0 && y1 < bigwidth && x1 >= 0 && x1 < bigwidth) {
+					temp[bigwidth * y1 + x1] = 1;
 				}
 			}
 		}
