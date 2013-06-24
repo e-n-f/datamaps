@@ -368,7 +368,6 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 	if (brush != thebrush) {
 		free(brushbytes);
 		thebrush = brush;
-		fprintf(stderr, "make brush %d\n", thebrush);
 
 #define MULT 8
 
@@ -381,9 +380,10 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 
 		int off = 0;
 		if (brush == 2) {
-			off = MULT * .5;
+			off = MULT;
 		}
 
+		int sum = 0;
 		int xa;
 		for (xa = 0; xa < 2 * radius; xa++) {
 			double dx = acos((xa - radius) / radius);
@@ -396,6 +396,7 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 
 				if (y1 >= 0 && y1 < bigwidth && x1 >= 0 && x1 < bigwidth) {
 					temp[bigwidth * y1 + x1] = 1;
+					sum++;
 				}
 			}
 		}
@@ -408,6 +409,12 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 			for (ya = 0; ya < bigwidth; ya++) {
 				brushbytes[xa / MULT + (ya / MULT) * brushwidth] += temp[xa + ya * bigwidth];
 			}
+		}
+
+		double scale = MULT * MULT * (1 << (brush - 1)) / (double) sum;
+
+		for (xa = 0; xa < brushwidth * brushwidth; xa++) {
+			brushbytes[xa] *= scale;
 		}
 
 		free(temp);
