@@ -116,7 +116,10 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	free(buf);
 }
 
-static void putPixel(int x0, int y0, double bright, double *image, double *cx, double *cy, double hue) {
+static void putPixel(double x, double y, double bright, double *image, double *cx, double *cy, double hue) {
+	int x0 = floor(x);
+	int y0 = floor(y);
+
 	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
 		image[y0 * 256 + x0] += bright;
 
