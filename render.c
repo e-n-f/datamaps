@@ -437,6 +437,21 @@ void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigne
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
 	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
 
+	// When overzoomed, also look up the adjacent tile
+	// to keep from drawing partial circles.
+
+	if (z_draw > dot_base && !dump) {
+		if (x_draw > 0) {
+			zxy2bufs(z_draw, x_draw - 1, y_draw, startbuf, endbuf, bytes);
+			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+		}
+
+		if (y_draw > 0) {
+			zxy2bufs(z_draw, x_draw, y_draw - 1, startbuf, endbuf, bytes);
+			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+		}
+	}
+
 	// Do the zoom levels numbered greater than this one.
 	//
 	// For zoom levels greater than this one, we look up the entire area

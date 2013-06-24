@@ -533,10 +533,17 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 
 	int width = brushes[brush][0];
 
+	if (x + width < 0) {
+		return;
+	}
+	if (y + width < 0) {
+		return;
+	}
+
 	int xx, yy;
 	for (xx = 0; xx < width; xx++) {
 		for (yy = 0; yy < width; yy++) {
-			drawPixel(x + xx - width/2, y + yy - width/2, image, cx, cy, brushes[brush][1 + yy * width + xx] * bright / 255, hue);
+			drawPixel(x + xx, y + yy, image, cx, cy, brushes[brush][1 + yy * width + xx] * bright / 255, hue);
 		}
 	}
 }
