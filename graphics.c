@@ -82,11 +82,12 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 
 			if (src[i] <= limit) {
 				double along = src[i] / limit;
-				buf[4 * i + 0] = midr * along + bg * (1 - along);
-				buf[4 * i + 1] = midg * along + bg * (1 - along);
-				buf[4 * i + 2] = midb * along + bg * (1 - along);
-				buf[4 * i + 3] = 255 * (src[i] / limit) +
-						  transparency * (1 - (src[i] / limit));
+				double opacity = (255 * along + transparency * (1 - along)) / 255;
+
+				buf[4 * i + 0] = midr * along / opacity + bg * (1 - along / opacity);
+				buf[4 * i + 1] = midg * along / opacity + bg * (1 - along / opacity);
+				buf[4 * i + 2] = midb * along / opacity + bg * (1 - along / opacity);
+				buf[4 * i + 3] = opacity * 255;
 			} else if (src[i] <= limit2) {
 				double along = (src[i] - limit) / (limit2 - limit);
 				buf[4 * i + 0] = fg * along + midr * (1 - along);
