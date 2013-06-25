@@ -101,6 +101,22 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 		buf2xys(start, mapbits, metabits, z_lookup, components, x, y, &meta);
 
+		if (!dump && z_draw >= mapbits / 2 - 8) {
+			// Add noise below the bottom of the file resolution
+			// so that it looks less gridded when overzoomed
+
+			int j;
+			for (j = 0; j < components; j++) {
+				int noisebits = 32 - mapbits / 2;
+				int i;
+
+				for (i = 0; i < noisebits; i++) {
+					x[j] |= ((y[j] >> (2 * noisebits - 1 - i)) & 1) << i;
+					y[j] |= ((x[j] >> (2 * noisebits - 1 - i)) & 1) << i;
+				}
+			}
+		}
+
 		double hue = -1;
 		if (metabits > 0 && colors > 0) {
 			hue = (double) meta / colors;
