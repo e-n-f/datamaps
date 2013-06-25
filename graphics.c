@@ -360,18 +360,18 @@ void drawPixel(double x, double y, double *image, double *cx, double *cy, double
 	putPixel(x + 1, y + 1, bright *  fpart(x) *  fpart(y), image, cx, cy, hue);
 }
 
-static int thebrush = -1;
+static double thebrush = -1;
 static int brushwidth = -1;
 static unsigned char *brushbytes = NULL;
 
-void drawBrush(double x, double y, double *image, double *cx, double *cy, double bright, int brush, double hue) {
+void drawBrush(double x, double y, double *image, double *cx, double *cy, double bright, double brush, double hue) {
 	if (brush != thebrush) {
 		free(brushbytes);
 		thebrush = brush;
 
 #define MULT 8
 
-		double radius = MULT * sqrt((1 << (brush - 1)) / M_PI);
+		double radius = MULT * sqrt(brush / M_PI);
 		int bigwidth = (((int) (2 * radius + (MULT - 1))) / MULT) * MULT;
 		brushwidth = bigwidth / MULT;
 
@@ -379,7 +379,7 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 		memset(temp, '\0', bigwidth * bigwidth);
 
 		int off = 0;
-		if (brush == 2) {
+		if (brush <= 2) {
 			off = MULT;
 		}
 
@@ -411,7 +411,7 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 			}
 		}
 
-		double scale = MULT * MULT * (1 << (brush - 1)) / (double) sum;
+		double scale = MULT * MULT * brush / (double) sum;
 
 		for (xa = 0; xa < brushwidth * brushwidth; xa++) {
 			brushbytes[xa] *= scale;

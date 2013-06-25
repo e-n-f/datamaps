@@ -67,14 +67,15 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 		start += bytes; // if not exact match, points to element before match
 	}
 
-	int step = 1, brush = 1;
+	int step = 1;
+	double brush = 1;
 	double bright1;
 	if (components == 1) {
 		bright1 = dot_bright;
 
-		if (z_draw >= dot_base) {
+		if (z_draw > dot_base) {
 			step = 1;
-			brush = multiplier * (z_draw - dot_base) + 1;
+			brush = 1 << (multiplier * (z_draw - dot_base));
 		} else {
 			step = 1 << (multiplier * (dot_base - z_draw));
 		}
@@ -158,8 +159,8 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 				yd[0] = (int) yd[0] + .5;
 			}
 
-			if (brush == 1) {
-				drawPixel(xd[0] - .5, yd[0] - .5, image, cx, cy, bright, hue);
+			if (brush <= 1) {
+				drawPixel(xd[0] - .5, yd[0] - .5, image, cx, cy, bright * brush, hue);
 			} else {
 				drawBrush(xd[0], yd[0], image, cx, cy, bright, brush, hue);
 			}
