@@ -74,7 +74,7 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			}
 
 			if (sat != 0) {
-#define COLOR_CAP .90
+#define COLOR_CAP .7
 				if (src[i] > limit2 * COLOR_CAP) {
 					src[i] = limit2 * COLOR_CAP;
 				}
