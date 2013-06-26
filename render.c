@@ -28,8 +28,9 @@ int multiplier = 1;
 
 void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn);
 
-void process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
+int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
+	int ret = 0;
 
 	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
 
@@ -42,7 +43,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 	int fd = open(fn, O_RDONLY);
 	if (fd < 0) {
 		perror(fn);
-		return;
+		return ret;
 	}
 
 	struct stat st;
@@ -179,6 +180,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 				drawPixel(xd[0] - .5, yd[0] - .5, image, cx, cy, bright * brush, hue);
 			} else {
 				drawBrush(xd[0], yd[0], image, cx, cy, bright, brush, hue);
+				ret = 1;
 			}
 		} else {
 			for (k = 1; k < components; k++) {
@@ -231,6 +233,7 @@ void process(char *fname, int components, int z_lookup, unsigned char *startbuf,
 
 	munmap(map, st.st_size);
 	close(fd);
+	return ret;
 }
 
 void *fmalloc(size_t size) {
@@ -456,12 +459,12 @@ void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigne
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+	int further = process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
 
 	// When overzoomed, also look up the adjacent tile
 	// to keep from drawing partial circles.
 
-	if (z_draw > dot_base && !dump) {
+	if (further && !dump) {
 		if (x_draw > 0) {
 			zxy2bufs(z_draw, x_draw - 1, y_draw, startbuf, endbuf, bytes);
 			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
