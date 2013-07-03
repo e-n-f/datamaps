@@ -35,11 +35,16 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 
 	int maxzoom = -1;
+	int all = 0;
 
-	while ((i = getopt(argc, argv, "z:")) != -1) {
+	while ((i = getopt(argc, argv, "z:a")) != -1) {
 		switch (i) {
 		case 'z':
 			maxzoom = atoi(optarg);
+			break;
+
+		case 'a':
+			all = 1;
 			break;
 
 		default:
@@ -138,26 +143,47 @@ int main(int argc, char **argv) {
 		// actually have the lowest tile number. How to fix?
 
 		unsigned int x[files[0]->components], y[files[0]->components];
-		unsigned int meta;
+		unsigned int meta = 0;
 		buf2xys(files[0]->buf, mapbits, metabits, files[0]->zoom, files[0]->components, x, y, &meta);
 
-		double lat, lon;
-		tile2latlon(x[0], y[0], 32, &lat, &lon);
+		if (all) {
+			int i;
 
-		int z;
-		for (z = 0; z <= maxzoom; z++) {
-			long long xx = x[0], yy = y[0];
+			for (i = 0; i < files[0]->components; i++) {
+				double lat, lon;
+				tile2latlon(x[i], y[i], 32, &lat, &lon);
 
-			if (xtile[z] != xx >> (32 - z) ||
-			    ytile[z] != yy >> (32 - z)) {
-				printf("%d %d %d\n",
-					z,
-					xtile[z] = xx >> (32 - z),
-					ytile[z] = yy >> (32 - z));
+				printf("%lf,%lf ", lat, lon);
+			}
+
+			if (metabits != 0) {
+				printf("%d:%d ", metabits, meta);
+			}
+
+			printf("// ");
+
+			for (i = 0; i < files[0]->components; i++) {
+				printf("%08x %08x ", x[i], y[i]);
+			}
+
+			printf("\n");
+		} else {
+			double lat, lon;
+			tile2latlon(x[0], y[0], 32, &lat, &lon);
+
+			int z;
+			for (z = 0; z <= maxzoom; z++) {
+				long long xx = x[0], yy = y[0];
+
+				if (xtile[z] != xx >> (32 - z) ||
+				    ytile[z] != yy >> (32 - z)) {
+					printf("%d %d %d\n",
+						z,
+						xtile[z] = xx >> (32 - z),
+						ytile[z] = yy >> (32 - z));
+				}
 			}
 		}
-
-		// printf("%lf,%lf\n", lat, lon);
 
 		if (fread(files[0]->buf, files[0]->bytes, 1, files[0]->f) != 1) {
 			memset(files[0]->buf, 0xFF, bytes);
