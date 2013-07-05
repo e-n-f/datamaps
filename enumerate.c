@@ -97,10 +97,20 @@ int main(int argc, char **argv) {
 	struct file *files[depth * maxn];
 	int nfiles = 0;
 
-	int xtile[maxzoom + 1];
-	int ytile[maxzoom + 1];
+	struct tile {
+		int xtile;
+		int ytile;
+		int count;
+		long long xsum;
+		long long ysum;
+	};
+
+	struct tile tile[maxzoom + 1];
+
 	for (i = 0; i <= maxzoom; i++) {
-		xtile[i] = ytile[i] = -1;
+		tile[i].xtile = tile[i].ytile = -1;
+		tile[i].count = 0;
+		tile[i].xsum = tile[i].ysum = 0;
 	}
 
 	int z_lookup;
@@ -169,24 +179,56 @@ int main(int argc, char **argv) {
 			printf("\n");
 		} else {
 			double lat, lon;
-			tile2latlon(x[0], y[0], 32, &lat, &lon);
 
 			int z;
 			for (z = 0; z <= maxzoom; z++) {
 				long long xx = x[0], yy = y[0];
 
-				if (xtile[z] != xx >> (32 - z) ||
-				    ytile[z] != yy >> (32 - z)) {
-					printf("%d %d %d\n",
-						z,
-						xtile[z] = xx >> (32 - z),
-						ytile[z] = yy >> (32 - z));
+				if (tile[z].xtile != xx >> (32 - z) ||
+				    tile[z].ytile != yy >> (32 - z)) {
+					if (tile[z].count > 0) {
+						tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
+							    32, &lat, &lon);
+
+						printf("%d %d %d %d %lf,%lf\n",
+							z,
+							tile[z].xtile,
+							tile[z].ytile,
+							tile[z].count,
+							lat, lon);
+					}
+
+					tile[z].xtile = xx >> (32 - z);
+					tile[z].ytile = yy >> (32 - z);
+					tile[z].count = 0;
+					tile[z].xsum = tile[z].ysum = 0;
 				}
+
+				tile[z].count++;
+				tile[z].xsum += xx;
+				tile[z].ysum += yy;
 			}
 		}
 
 		if (fread(files[0]->buf, files[0]->bytes, 1, files[0]->f) != 1) {
 			memset(files[0]->buf, 0xFF, bytes);
+		}
+	}
+
+	double lat, lon;
+
+	int z;
+	for (z = 0; z <= maxzoom; z++) {
+		if (tile[z].count > 0) {
+			tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
+				    32, &lat, &lon);
+
+			printf("%d %d %d %d %lf,%lf\n",
+				z,
+				tile[z].xtile,
+				tile[z].ytile,
+				tile[z].count,
+				lat, lon);
 		}
 	}
 
