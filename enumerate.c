@@ -18,7 +18,7 @@ struct file {
 };
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-z max] file\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-z max] [-Z min] file\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -35,12 +35,17 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 
 	int maxzoom = -1;
+	int minzoom = 0;
 	int all = 0;
 
-	while ((i = getopt(argc, argv, "z:a")) != -1) {
+	while ((i = getopt(argc, argv, "z:Z:a")) != -1) {
 		switch (i) {
 		case 'z':
 			maxzoom = atoi(optarg);
+			break;
+
+		case 'Z':
+			minzoom = atoi(optarg);
 			break;
 
 		case 'a':
@@ -181,7 +186,7 @@ int main(int argc, char **argv) {
 			double lat, lon;
 
 			int z;
-			for (z = 0; z <= maxzoom; z++) {
+			for (z = minzoom; z <= maxzoom; z++) {
 				long long xx = x[0], yy = y[0];
 
 				if (tile[z].xtile != xx >> (32 - z) ||
@@ -215,20 +220,22 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	double lat, lon;
+	if (!all) {
+		double lat, lon;
 
-	int z;
-	for (z = 0; z <= maxzoom; z++) {
-		if (tile[z].count > 0) {
-			tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
-				    32, &lat, &lon);
+		int z;
+		for (z = minzoom; z <= maxzoom; z++) {
+			if (tile[z].count > 0) {
+				tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
+					    32, &lat, &lon);
 
-			printf("%d %d %d %d %lf,%lf\n",
-				z,
-				tile[z].xtile,
-				tile[z].ytile,
-				tile[z].count,
-				lat, lon);
+				printf("%d %d %d %d %lf,%lf\n",
+					z,
+					tile[z].xtile,
+					tile[z].ytile,
+					tile[z].count,
+					lat, lon);
+			}
 		}
 	}
 
