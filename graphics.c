@@ -252,8 +252,10 @@ static void antialiasedLineThick(double x0, double y0, double x1, double y1, dou
 			antialiasedLine(x0 + c * off, y0 + s * off, x1 + c * off, y1 + s * off, image, cx, cy, bright, hue);
 			antialiasedLine(x0 - c * off, y0 - s * off, x1 - c * off, y1 - s * off, image, cx, cy, bright, hue);
 		} else {
-			antialiasedLine(x0 + c * off, y0 + s * off, x1 + c * off, y1 + s * off, image, cx, cy, bright * thick / 2, hue);
-			antialiasedLine(x0 - c * off, y0 - s * off, x1 - c * off, y1 - s * off, image, cx, cy, bright * thick / 2, hue);
+			antialiasedLine(x0 + c * (off - 1 + thick / 2), y0 + s * (off - 1 + thick / 2),
+					x1 + c * (off - 1 + thick / 2), y1 + s * (off - 1 + thick / 2), image, cx, cy, bright * thick / 2, hue);
+			antialiasedLine(x0 - c * (off - 1 + thick / 2), y0 - s * (off - 1 + thick / 2),
+					x1 - c * (off - 1 + thick / 2), y1 - s * (off - 1 + thick / 2), image, cx, cy, bright * thick / 2, hue);
 		}
 
 		thick -= 2;
