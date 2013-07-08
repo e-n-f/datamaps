@@ -233,6 +233,34 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 	}
 }
 
+static void antialiasedLineThick(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, double thick) {
+	if (thick <= 1) {
+		antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright * thick, hue);
+		return;
+	}
+
+	antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+	int off = 1;
+	thick--;
+
+	double angle = atan2(y1 - y0, x1 - x0) + M_PI / 2;
+	double c = cos(angle);
+	double s = sin(angle);
+
+	while (thick > 0) {
+		if (thick >= 2) {
+			antialiasedLine(x0 + c * off, y0 + s * off, x1 + c * off, y1 + s * off, image, cx, cy, bright, hue);
+			antialiasedLine(x0 - c * off, y0 - s * off, x1 - c * off, y1 - s * off, image, cx, cy, bright, hue);
+		} else {
+			antialiasedLine(x0 + c * off, y0 + s * off, x1 + c * off, y1 + s * off, image, cx, cy, bright * thick / 2, hue);
+			antialiasedLine(x0 - c * off, y0 - s * off, x1 - c * off, y1 - s * off, image, cx, cy, bright * thick / 2, hue);
+		}
+
+		thick -= 2;
+		off++;
+	}
+}
+
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
 void drawLine(int x0, int y0, int x1, int y1, double *image, double *cx, double *cy, double bright, double hue) {
 	int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
@@ -342,7 +370,7 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 	if (accept) {
 		if (image != NULL) {
 			if (antialias) {
-				antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+				antialiasedLineThick(x0, y0, x1, y1, image, cx, cy, bright, hue, 1);
 			} else {
 				drawLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
 			}
