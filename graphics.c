@@ -294,25 +294,18 @@ void drawLine(int x0, int y0, int x1, int y1, double *image, double *cx, double 
 #define BOTTOM 4
 #define TOP 8
 
-// XXX Why doesn't this look right with 0..255?
-// Because of not drawing the last point?
-#define XMIN -1
-#define YMIN -1
-#define XMAX 256
-#define YMAX 256
-
-static int computeOutCode(double x, double y) {
+static int computeOutCode(double x, double y, double xmin, double ymin, double xmax, double ymax) {
 	int code = INSIDE;
 
-	if (x < XMIN) {
+	if (x < xmin) {
 		code |= LEFT;
-	} else if (x > XMAX) {
+	} else if (x > xmax) {
 		code |= RIGHT;
 	}
 
-	if (y < YMIN) {
+	if (y < ymin) {
 		code |= BOTTOM;
-	} else if (y > YMAX) {
+	} else if (y > ymax) {
 		code |= TOP;
 	}
 
@@ -321,8 +314,15 @@ static int computeOutCode(double x, double y) {
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
 int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias) {
-	int outcode0 = computeOutCode(x0, y0);
-	int outcode1 = computeOutCode(x1, y1);
+	double thick = 1;
+
+	double xmin = 0 - thick;
+	double ymin = 0 - thick;
+	double xmax = 255 + thick;
+	double ymax = 255 + thick;
+
+	int outcode0 = computeOutCode(x0, y0, xmin, ymin, xmax, ymax);
+	int outcode1 = computeOutCode(x1, y1, xmin, ymin, xmax, ymax);
 	int accept = 0;
  
 	while (1) {
@@ -342,17 +342,17 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 			// Now find the intersection point;
 			// use formulas y = y0 + slope * (x - x0), x = x0 + (1 / slope) * (y - y0)
 			if (outcodeOut & TOP) {           // point is above the clip rectangle
-				x = x0 + (x1 - x0) * (YMAX - y0) / (y1 - y0);
-				y = YMAX;
+				x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0);
+				y = ymax;
 			} else if (outcodeOut & BOTTOM) { // point is below the clip rectangle
-				x = x0 + (x1 - x0) * (YMIN - y0) / (y1 - y0);
-				y = YMIN;
+				x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0);
+				y = ymin;
 			} else if (outcodeOut & RIGHT) {  // point is to the right of clip rectangle
-				y = y0 + (y1 - y0) * (XMAX - x0) / (x1 - x0);
-				x = XMAX;
+				y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0);
+				x = xmax;
 			} else if (outcodeOut & LEFT) {   // point is to the left of clip rectangle
-				y = y0 + (y1 - y0) * (XMIN - x0) / (x1 - x0);
-				x = XMIN;
+				y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0);
+				x = xmin;
 			}
  
 			// Now we move outside point to intersection point to clip
@@ -360,11 +360,11 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 			if (outcodeOut == outcode0) {
 				x0 = x;
 				y0 = y;
-				outcode0 = computeOutCode(x0, y0);
+				outcode0 = computeOutCode(x0, y0, xmin, ymin, xmax, ymax);
 			} else {
 				x1 = x;
 				y1 = y;
-				outcode1 = computeOutCode(x1, y1);
+				outcode1 = computeOutCode(x1, y1, xmin, ymin, xmax, ymax);
 			}
 		}
 	}
@@ -372,7 +372,7 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 	if (accept) {
 		if (image != NULL) {
 			if (antialias) {
-				antialiasedLineThick(x0, y0, x1, y1, image, cx, cy, bright, hue, 1);
+				antialiasedLineThick(x0, y0, x1, y1, image, cx, cy, bright, hue, thick);
 			} else {
 				drawLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
 			}
