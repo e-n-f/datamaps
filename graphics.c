@@ -313,13 +313,11 @@ static int computeOutCode(double x, double y, double xmin, double ymin, double x
 }
 
 // http://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
-int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias) {
-	double thick = 1;
-
-	double xmin = 0 - thick;
-	double ymin = 0 - thick;
-	double xmax = 255 + thick;
-	double ymax = 255 + thick;
+int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias, double thick) {
+	double xmin = -1 - thick;
+	double ymin = -1 - thick;
+	double xmax = 256 + thick;
+	double ymax = 256 + thick;
 
 	int outcode0 = computeOutCode(x0, y0, xmin, ymin, xmax, ymax);
 	int outcode1 = computeOutCode(x1, y1, xmin, ymin, xmax, ymax);

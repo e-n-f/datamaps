@@ -15,6 +15,7 @@ double dot_bright = 0.05917;
 double dot_ramp = 1.23;
 
 double line_per_dot = 6.64;
+double line_ramp = 1;
 
 int gps_base = 16;
 double gps_dist = 1600; // about 50 feet
@@ -70,6 +71,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 	int step = 1;
 	double brush = 1;
+	double thick = 1;
 	double bright1;
 	if (components == 1) {
 		bright1 = dot_bright;
@@ -84,7 +86,13 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
 	} else {
 		bright1 = dot_bright * line_per_dot;
-		bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
+
+		if (line_ramp >= 1) {
+			thick *= exp(log(line_ramp) * (z_draw - dot_base));
+			bright1 *= exp(log(dot_ramp / line_ramp) * (z_draw - dot_base));
+		} else {
+			bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
+		}
 	}
 
 	if (dump) {
@@ -143,7 +151,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				should = 1;
 			} else {
 				for (k = 1; k < components; k++) {
-					if (drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], NULL, NULL, NULL, 0, 0, 0)) {
+					if (drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], NULL, NULL, NULL, 0, 0, 0, 0)) {
 						should = 1;
 						break;
 					}
@@ -208,24 +216,24 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 				if (xk - xk1 >= (1LL << 31)) {
 					wxy2fxy(xk - (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 					wxy2fxy(xk1 + (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 				} else if (xk1 - xk >= (1LL << 31)) {
 					wxy2fxy(xk1 - (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 					wxy2fxy(xk + (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 				} else {
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
 				}
 			}
 		}
@@ -247,8 +255,8 @@ void *fmalloc(size_t size) {
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t transparency] [-dga] [-C colors] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] file z x y\n", argv[0]);
-	fprintf(stderr, "Usage: %s -A [-t transparency] [-dga] [-C colors] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] file z minlat minlon maxlat maxlon\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t transparency] [-dga] [-C colors] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] [-l lineramp] file z x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s -A [-t transparency] [-dga] [-C colors] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] [-l lineramp] file z minlat minlon maxlat maxlon\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -265,7 +273,7 @@ int main(int argc, char **argv) {
 	int invert = 0;
 	int color = -1;
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a4Awc:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a4Awc:l:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -301,6 +309,12 @@ int main(int argc, char **argv) {
 
 		case 'G':
 			if (sscanf(optarg, "%lf", &display_gamma) != 1) {
+				usage(argv);
+			}
+			break;
+
+		case 'l':
+			if (sscanf(optarg, "%lf", &line_ramp) != 1) {
 				usage(argv);
 			}
 			break;
