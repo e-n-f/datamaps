@@ -16,6 +16,7 @@ double dot_ramp = 1.23;
 
 double line_per_dot = 6.64;
 double line_ramp = 1;
+double line_thick = 1;
 
 int gps_base = 16;
 double gps_dist = 1600; // about 50 feet
@@ -71,7 +72,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 	int step = 1;
 	double brush = 1;
-	double thick = 1;
+	double thick = line_thick;
 	double bright1;
 	if (components == 1) {
 		bright1 = dot_bright;
@@ -85,7 +86,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 		bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
 	} else {
-		bright1 = dot_bright * line_per_dot;
+		bright1 = dot_bright * line_per_dot / line_thick;
 
 		if (line_ramp >= 1) {
 			thick *= exp(log(line_ramp) * (z_draw - dot_base));
@@ -273,7 +274,7 @@ int main(int argc, char **argv) {
 	int invert = 0;
 	int color = -1;
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a4Awc:l:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a4Awc:l:L:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -315,6 +316,12 @@ int main(int argc, char **argv) {
 
 		case 'l':
 			if (sscanf(optarg, "%lf", &line_ramp) != 1) {
+				usage(argv);
+			}
+			break;
+
+		case 'L':
+			if (sscanf(optarg, "%lf", &line_thick) != 1) {
 				usage(argv);
 			}
 			break;
