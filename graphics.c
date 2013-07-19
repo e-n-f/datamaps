@@ -10,7 +10,7 @@
 #error libpng >= 1.6 is required
 #endif
 
-void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color) {
+void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int saturate) {
 	unsigned char *buf = malloc(width * height * 4);
 
 	int midr, midg, midb;
@@ -78,6 +78,14 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 				if (src[i] > limit2 * COLOR_CAP) {
 					src[i] = limit2 * COLOR_CAP;
 				}
+			}
+
+			if (!saturate) {
+				if (src[i] > limit2) {
+					src[i] = limit2;
+				}
+
+				src[i] *= limit / limit2;
 			}
 
 			if (src[i] <= limit) {
