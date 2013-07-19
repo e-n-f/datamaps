@@ -274,7 +274,7 @@ int main(int argc, char **argv) {
 	int invert = 0;
 	int color = -1;
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a4Awc:l:L:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -336,8 +336,12 @@ int main(int argc, char **argv) {
 			}
 			break;
 
+		case '1':
+			multiplier = 0; // log2(1)
+			break;
+
 		case '4':
-			multiplier = 2;
+			multiplier = 2; // log2(2)
 			break;
 
 		case 'A':
