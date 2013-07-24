@@ -274,11 +274,16 @@ int main(int argc, char **argv) {
 	int invert = 0;
 	int color = -1;
 	int saturate = 1;
+	int mask = 0;
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:s")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:sm")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
+			break;
+
+		case 'm':
+			mask = 1;
 			break;
 
 		case 's':
@@ -460,7 +465,7 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1));
-			out(image2, cx2, cy2, 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1), transparency, display_gamma, invert, color, saturate);
+			out(image2, cx2, cy2, 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1), transparency, display_gamma, invert, color, saturate, mask);
 		}
 	} else {
 		unsigned int x_draw = atoi(argv[optind + 2]);
@@ -469,7 +474,7 @@ int main(int argc, char **argv) {
 		do_tile(image, cx, cy, z_draw, x_draw, y_draw, bytes, colors, fname, mapbits, metabits, gps, dump, maxn);
 
 		if (!dump) {
-			out(image, cx, cy, 256, 256, transparency, display_gamma, invert, color, saturate);
+			out(image, cx, cy, 256, 256, transparency, display_gamma, invert, color, saturate, mask);
 		}
 	}
 

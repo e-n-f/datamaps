@@ -10,7 +10,7 @@
 #error libpng >= 1.6 is required
 #endif
 
-void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int saturate) {
+void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int saturate, int mask) {
 	unsigned char *buf = malloc(width * height * 4);
 
 	int midr, midg, midb;
@@ -108,6 +108,10 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 				buf[4 * i + 2] = fg;
 				buf[4 * i + 3] = 255;
 			}
+		}
+
+		if (mask) {
+			buf[4 * i + 3] = 255 - buf[4 * i + 3];
 		}
 	}
 
