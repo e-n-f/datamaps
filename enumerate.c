@@ -199,7 +199,8 @@ int main(int argc, char **argv) {
 						tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
 							    32, &lat, &lon);
 
-						printf("%d %d %d %d %lf,%lf\n",
+						printf("%s %d %d %d %d %lf,%lf\n",
+							fname,
 							z,
 							tile[z].xtile,
 							tile[z].ytile,
