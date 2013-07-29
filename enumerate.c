@@ -121,6 +121,10 @@ int main(int argc, char **argv) {
 	int z_lookup;
 	for (z_lookup = 0; z_lookup < depth; z_lookup++) {
 		for (i = 1; i <= maxn; i++) {
+			if (i == 1 && z_lookup != 0) {
+				continue;
+			}
+
 			char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
 			sprintf(fn, "%s/%d,%d", fname, i, z_lookup);
 
