@@ -1,0 +1,5 @@
+#!/bin/sh
+
+mkdir -p tiles/$1/$2/$3
+echo "$1 $2 $3 $4"
+./render -t 0 -c FF8800 $1 $2 $3 $4 > tiles/$1/$2/$3/$4.png

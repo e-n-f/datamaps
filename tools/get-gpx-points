@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+
+use XML::Parser;
+
+sub start {
+        my ($expat, $element, %tags) = @_;
+
+	if ($element eq "trkpt") {
+		printf("%s,%s\n", $tags{'lat'}, $tags{'lon'});
+	}
+}
+
+for $file (@ARGV) {
+	print STDERR "$file\n";
+	new XML::Parser(Handlers => { Start => \&start })->parsefile($file);
+}
