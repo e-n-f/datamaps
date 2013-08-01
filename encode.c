@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
 		char fn[strlen(destdir) + 10 + 1 + 10 + 1];
 		sprintf(fn, "%s/%d,%d", destdir, files->legs, files->level);
 
-		int fd = open(fn, O_RDONLY);
+		int fd = open(fn, O_RDWR);
 		if (fd < 0) {
 			perror(fn);
 			exit(EXIT_FAILURE);
@@ -244,12 +244,6 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
-		void *map = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-		if (map == MAP_FAILED) {
-			perror("mmap");
-			exit(EXIT_FAILURE);
-		}
-
 		int bytes = bytesfor(mapbits, metabits, files->legs, files->level);
 		gSortBytes = bytes;
 
@@ -258,8 +252,45 @@ int main(int argc, char **argv) {
 			(long long) st.st_size / bytes,
 			files->legs, files->level);
 
-		qsort(map, st.st_size / bytes, bytes, bufcmp);
+		int page = getpagesize();
+		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
+		while (unit % page != 0) {
+			unit += bytes;
+		}
 
+		long long start;
+		for (start = 0; start < st.st_size; start += unit) {
+			long long end = start + unit;
+			if (end > st.st_size) {
+				end = st.st_size;
+			}
+
+			fprintf(stderr, "part %lld of %lld (start %lld end %lld)\n", start / unit + 1, st.st_size / unit + 1, start, end);
+
+			void *map = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, start);
+			if (map == MAP_FAILED) {
+				perror("mmap");
+				exit(EXIT_FAILURE);
+			}
+
+			qsort(map, (end - start) / bytes, bytes, bufcmp);
+
+			// Sorting and then copying avoids the need to
+			// write out intermediate stages of the sort.
+
+			void *map2 = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_SHARED, fd, start);
+			if (map == MAP_FAILED) {
+				perror("mmap (write)");
+				exit(EXIT_FAILURE);
+			}
+
+			memcpy(map2, map, end - start);
+
+			munmap(map, end - start);
+			munmap(map2, end - start);
+		}
+
+#if 0
 		if (unlink(fn) != 0) {
 			perror("unlink");
 			exit(EXIT_FAILURE);
@@ -284,8 +315,9 @@ int main(int argc, char **argv) {
 		}
 
 		munmap(map, st.st_size);
-		close(fd);
 		close(out);
+#endif
+		close(fd);
 	}
 
 	return 0;
