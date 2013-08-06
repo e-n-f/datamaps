@@ -271,9 +271,16 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
+#define MAX_WRITE (1024 * 1024 * 50)
+
 		size_t off = 0;
 		while (off < st.st_size) {
-			ssize_t written = write(out, map + off, st.st_size - off);
+			long long towrite = st.st_size - off;
+			if (towrite > MAX_WRITE) {
+				towrite = MAX_WRITE;
+			}
+
+			ssize_t written = write(out, map + off, towrite);
 
 			if (written < 0) {
 				perror("write");
