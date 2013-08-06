@@ -19,13 +19,13 @@ int main(int argc, char **argv) {
 	extern int optind;
 	extern char *optarg;
 
-	char *outfname = NULL;
+	char *destdir = NULL;
 	int dedup = 0;
 
 	while ((i = getopt(argc, argv, "o:d")) != -1) {
 		switch (i) {
 		case 'o':
-			outfname = optarg;
+			destdir = optarg;
 			break;
 
 		case 'd':
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (argc - optind < 1 || outfname == NULL) {
+	if (argc - optind < 1 || destdir == NULL) {
 		usage(argv);
 	}
 
@@ -87,6 +87,22 @@ int main(int argc, char **argv) {
 		mapbits = file_mapbits;
 		metabits = file_metabits;
 	}
+
+	if (mkdir(destdir, 0777) != 0) {
+		perror(destdir);
+		exit(EXIT_FAILURE);
+	}
+
+	char s[strlen(destdir) + 5 + 1];
+	sprintf(s, "%s/meta", destdir);
+	FILE *f = fopen(s, "w");
+	if (f == NULL) {
+		perror(s);
+		exit(EXIT_FAILURE);
+	}
+	fprintf(f, "1\n");
+	fprintf(f, "%d %d %d\n", mapbits, metabits, maxn);
+	fclose(f);
 
 	return 0;
 }
