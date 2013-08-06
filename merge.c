@@ -10,7 +10,7 @@
 #include "graphics.h"
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-o outfile] [-d] file ...\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-o outfile] [-u] file ...\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -20,16 +20,16 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 
 	char *destdir = NULL;
-	int dedup = 0;
+	int uniq = 0;
 
-	while ((i = getopt(argc, argv, "o:d")) != -1) {
+	while ((i = getopt(argc, argv, "o:u")) != -1) {
 		switch (i) {
 		case 'o':
 			destdir = optarg;
 			break;
 
-		case 'd':
-			dedup = 1;
+		case 'u':
+			uniq = 1;
 			break;
 
 		default:
