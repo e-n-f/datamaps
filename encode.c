@@ -154,6 +154,26 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 	}
 }
 
+struct merge {
+	long long start;
+	long long end;
+	unsigned char *map;
+	int bytes;
+};
+
+int mergecmp(const void *v1, const void *v2) {
+	const struct merge *m1 = v1;
+	const struct merge *m2 = v2;
+
+	return memcmp(m1->map + m1->start, m2->map + m2->start, m1->bytes);
+}
+
+void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f) {
+	while (1) {
+		qsort(merges, nmerges, sizeof(struct merge *), mergecmp);
+	}
+}
+
 int main(int argc, char **argv) {
 	int i;
 	extern int optind;
@@ -258,6 +278,9 @@ int main(int argc, char **argv) {
 			unit += bytes;
 		}
 
+		int nmerges = (st.st_size + unit - 1) / unit;
+		struct merge merges[nmerges];
+
 		long long start;
 		for (start = 0; start < st.st_size; start += unit) {
 			long long end = start + unit;
@@ -265,7 +288,10 @@ int main(int argc, char **argv) {
 				end = st.st_size;
 			}
 
-			fprintf(stderr, "part %lld of %lld (start %lld end %lld)\n", start / unit + 1, st.st_size / unit + 1, start, end);
+			fprintf(stderr, "part %lld of %lld (start %lld end %lld)\n", start / unit + 1, nmerges, start, end);
+
+			merges[start / unit].start = start;
+			merges[start / unit].end = end;
 
 			void *map = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, start);
 			if (map == MAP_FAILED) {
@@ -290,33 +316,32 @@ int main(int argc, char **argv) {
 			munmap(map2, end - start);
 		}
 
-#if 0
+		void *map = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+		if (map == MAP_FAILED) {
+			perror("mmap");
+			exit(EXIT_FAILURE);
+		}
+
 		if (unlink(fn) != 0) {
 			perror("unlink");
 			exit(EXIT_FAILURE);
 		}
 
-		int out = open(fn, O_RDWR | O_CREAT, 0666);
-		if (out < 0) {
+		FILE *f = fopen(fn, "w");
+		if (f == NULL) {
 			perror(fn);
 			exit(EXIT_FAILURE);
 		}
 
-		size_t off = 0;
-		while (off < st.st_size) {
-			ssize_t written = write(out, map + off, st.st_size - off);
-
-			if (written < 0) {
-				perror("write");
-				exit(1);
-			}
-
-			off += written;
+		for (i = 0; i < nmerges; i++) {
+			merges[i].bytes = bytes;
+			merges[i].map = map;
 		}
 
+		merge(merges, nmerges, map, f);
+
 		munmap(map, st.st_size);
-		close(out);
-#endif
+		fclose(f);
 		close(fd);
 	}
 
