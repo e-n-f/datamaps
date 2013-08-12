@@ -18,7 +18,7 @@ struct file {
 };
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-z max] [-Z min] file\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-ad] [-z max] [-Z min] file\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -36,9 +36,10 @@ int main(int argc, char **argv) {
 
 	int maxzoom = -1;
 	int minzoom = 0;
+	int showdist = 0;
 	int all = 0;
 
-	while ((i = getopt(argc, argv, "z:Z:a")) != -1) {
+	while ((i = getopt(argc, argv, "z:Z:ad")) != -1) {
 		switch (i) {
 		case 'z':
 			maxzoom = atoi(optarg);
@@ -46,6 +47,10 @@ int main(int argc, char **argv) {
 
 		case 'Z':
 			minzoom = atoi(optarg);
+			break;
+
+		case 'd':
+			showdist = 1;
 			break;
 
 		case 'a':
@@ -106,6 +111,7 @@ int main(int argc, char **argv) {
 		int xtile;
 		int ytile;
 		int count;
+		double len;
 		long long xsum;
 		long long ysum;
 	};
@@ -115,6 +121,7 @@ int main(int argc, char **argv) {
 	for (i = 0; i <= maxzoom; i++) {
 		tile[i].xtile = tile[i].ytile = -1;
 		tile[i].count = 0;
+		tile[i].len = 0;
 		tile[i].xsum = tile[i].ysum = 0;
 	}
 
@@ -199,24 +206,50 @@ int main(int argc, char **argv) {
 						tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
 							    32, &lat, &lon);
 
-						printf("%s %d %d %d %d %lf,%lf\n",
+						printf("%s %d %d %d %d %lf,%lf",
 							fname,
 							z,
 							tile[z].xtile,
 							tile[z].ytile,
 							tile[z].count,
 							lat, lon);
+
+						if (showdist) {
+							printf(" %f", tile[z].len);
+						}
+
+						printf("\n");
 					}
 
 					tile[z].xtile = xx >> (32 - z);
 					tile[z].ytile = yy >> (32 - z);
 					tile[z].count = 0;
+					tile[z].len = 0;
 					tile[z].xsum = tile[z].ysum = 0;
 				}
 
 				tile[z].count++;
 				tile[z].xsum += xx;
 				tile[z].ysum += yy;
+
+				if (showdist) {
+					int i;
+					double dist = 0;
+					double max = 1LL << (32 - z);
+
+					for (i = 0; i + 1 < files[0]->components; i++) {
+						double d1 = (long long) x[i] - x[i + 1];
+						double d2 = (long long) y[i] - y[i + 1];
+						double d = sqrt(d1 * d1 + d2 * d2);
+
+#define MAX 6400  /* ~200 feet */
+						if (d < MAX) {
+							dist += sqrt(d1 * d1 + d2 * d2) / max;
+						}
+					}
+
+					tile[z].len += dist;
+				}
 			}
 		}
 
@@ -234,12 +267,19 @@ int main(int argc, char **argv) {
 				tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
 					    32, &lat, &lon);
 
-				printf("%d %d %d %d %lf,%lf\n",
+				printf("%s %d %d %d %d %lf,%lf",
+					fname,
 					z,
 					tile[z].xtile,
 					tile[z].ytile,
 					tile[z].count,
 					lat, lon);
+
+				if (showdist) {
+					printf(" %f", tile[z].len);
+				}
+
+				printf("\n");
 			}
 		}
 	}
