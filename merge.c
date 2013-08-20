@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 	fclose(f);
 
 	int z_lookup;
-	for (z_lookup = 0; z_lookup < maxzoom; z_lookup++) {
+	for (z_lookup = 0; z_lookup < maxzoom + 8; z_lookup++) {
 		for (i = 1; i <= maxn; i++) {
 			if (i == 1 && z_lookup != 0) {
 				continue;
@@ -156,6 +156,9 @@ int main(int argc, char **argv) {
 					exit(EXIT_FAILURE);
 				}
 
+				unsigned char wrote[bytes];
+				memset(wrote, 0, bytes);
+
 				while (remaining) {
 					int best = -1;
 
@@ -172,14 +175,20 @@ int main(int argc, char **argv) {
 						break;
 					}
 
-					fwrite(files[best].data, bytes, 1, out);
-
-#if 0
-					for (j = 0; j < bytes; j++) {
-						printf("%02x ", files[best].data[j]);
+					if (memcmp(wrote, files[best].data, bytes) > 0) {
+						printf("??? out of order:\n");
+						for (j = 0; j < bytes; j++) {
+							printf("%02x ", wrote[j]);
+						}
+						printf(" vs ");
+						for (j = 0; j < bytes; j++) {
+							printf("%02x ", files[best].data[j]);
+						}
+						printf("\n");
 					}
-					printf("\n");
-#endif
+
+					memcpy(wrote, files[best].data, bytes);
+					fwrite(files[best].data, bytes, 1, out);
 
 					files[best].remaining = fread(files[best].data, bytes, 1, files[best].fp);
 					if (files[best].remaining <= 0) {
