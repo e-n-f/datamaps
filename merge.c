@@ -14,6 +14,12 @@ void usage(char **argv) {
 	exit(EXIT_FAILURE);
 }
 
+struct file {
+	FILE *fp;
+	char data[16];
+	int remaining;
+};
+
 int main(int argc, char **argv) {
 	int i;
 	extern int optind;
@@ -88,6 +94,8 @@ int main(int argc, char **argv) {
 		metabits = file_metabits;
 	}
 
+	int maxzoom = (mapbits - 16) / 2;
+
 	if (mkdir(destdir, 0777) != 0) {
 		perror(destdir);
 		exit(EXIT_FAILURE);
@@ -103,6 +111,80 @@ int main(int argc, char **argv) {
 	fprintf(f, "1\n");
 	fprintf(f, "%d %d %d\n", mapbits, metabits, maxn);
 	fclose(f);
+
+	int z_lookup;
+	for (z_lookup = 0; z_lookup < maxzoom; z_lookup++) {
+		for (i = 1; i <= maxn; i++) {
+			if (i == 1 && z_lookup != 0) {
+				continue;
+			}
+
+			printf("merging zoom level %d for point count %d\n", z_lookup, i);
+			int bytes = bytesfor(mapbits, metabits, i, z_lookup);
+
+			struct file files[nfile];
+			int n = 0;
+			int remaining = 0;
+
+			int j;
+			for (j = 0; j < nfile; j++) {
+				char *fname = argv[optind + j];
+
+				char fname2[strlen(fname) + 1 + 5 + 1 + 5 + 1];
+				sprintf(fname2, "%s/%d,%d", fname, i, z_lookup);
+
+				files[n].fp = fopen(fname2, "rb");
+				if (files[n].fp == NULL) {
+					perror(fname2);
+				} else {
+					files[n].remaining = fread(files[n].data, bytes, 1, files[n].fp);
+					if (files[n].remaining > 0) {
+						remaining++;
+					}
+					n++;
+				}
+			}
+
+			char outfname[strlen(destdir) + 1 + 5 + 1 + 5 + 1];
+			sprintf(outfname, "%s/%d,%d", destdir, i, z_lookup);
+			FILE *out = fopen(outfname, "wb");
+
+			if (out == NULL) {
+				perror(outfname);
+				exit(EXIT_FAILURE);
+			}
+
+			while (remaining) {
+				int best = -1;
+
+				for (j = 0; j < n; j++) {
+					if (files[j].remaining) {
+						if (best < 0 ||
+						    memcmp(files[j].data, files[best].data, bytes) < 0) {
+							best = j;
+						}
+					}
+				}
+
+				if (best < 0) {
+					fprintf(stderr, "shouldn't happen\n");
+					break;
+				}
+
+				fwrite(files[best].data, bytes, 1, out);
+
+				files[best].remaining = fread(files[best].data, bytes, 1, files[best].fp);
+				if (files[best].remaining <= 0) {
+					remaining--;
+				}
+			}
+
+			fclose(out);
+			for (j = 0; j < n; j++) {
+				fclose(files[j].fp);
+			}
+		}
+	}
 
 	return 0;
 }
