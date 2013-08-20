@@ -145,41 +145,44 @@ int main(int argc, char **argv) {
 				}
 			}
 
-			char outfname[strlen(destdir) + 1 + 5 + 1 + 5 + 1];
-			sprintf(outfname, "%s/%d,%d", destdir, i, z_lookup);
-			FILE *out = fopen(outfname, "wb");
+			if (remaining != 0) {
+				char outfname[strlen(destdir) + 1 + 5 + 1 + 5 + 1];
+				sprintf(outfname, "%s/%d,%d", destdir, i, z_lookup);
+				FILE *out = fopen(outfname, "wb");
 
-			if (out == NULL) {
-				perror(outfname);
-				exit(EXIT_FAILURE);
-			}
+				if (out == NULL) {
+					perror(outfname);
+					exit(EXIT_FAILURE);
+				}
 
-			while (remaining) {
-				int best = -1;
+				while (remaining) {
+					int best = -1;
 
-				for (j = 0; j < n; j++) {
-					if (files[j].remaining) {
-						if (best < 0 ||
-						    memcmp(files[j].data, files[best].data, bytes) < 0) {
-							best = j;
+					for (j = 0; j < n; j++) {
+						if (files[j].remaining) {
+							if (best < 0 ||
+							    memcmp(files[j].data, files[best].data, bytes) < 0) {
+								best = j;
+							}
 						}
+					}
+
+					if (best < 0) {
+						fprintf(stderr, "shouldn't happen\n");
+						break;
+					}
+
+					fwrite(files[best].data, bytes, 1, out);
+
+					files[best].remaining = fread(files[best].data, bytes, 1, files[best].fp);
+					if (files[best].remaining <= 0) {
+						remaining--;
 					}
 				}
 
-				if (best < 0) {
-					fprintf(stderr, "shouldn't happen\n");
-					break;
-				}
-
-				fwrite(files[best].data, bytes, 1, out);
-
-				files[best].remaining = fread(files[best].data, bytes, 1, files[best].fp);
-				if (files[best].remaining <= 0) {
-					remaining--;
-				}
+				fclose(out);
 			}
 
-			fclose(out);
 			for (j = 0; j < n; j++) {
 				fclose(files[j].fp);
 			}
