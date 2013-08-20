@@ -16,8 +16,8 @@ void usage(char **argv) {
 
 struct file {
 	FILE *fp;
-	char data[16];
 	int remaining;
+	unsigned char *data;
 };
 
 int main(int argc, char **argv) {
@@ -119,8 +119,8 @@ int main(int argc, char **argv) {
 				continue;
 			}
 
-			printf("merging zoom level %d for point count %d\n", z_lookup, i);
 			int bytes = bytesfor(mapbits, metabits, i, z_lookup);
+			printf("merging zoom level %d for point count %d (%d bytes)\n", z_lookup, i, bytes);
 
 			struct file files[nfile];
 			int n = 0;
@@ -137,6 +137,7 @@ int main(int argc, char **argv) {
 				if (files[n].fp == NULL) {
 					perror(fname2);
 				} else {
+					files[n].data = malloc(bytes);
 					files[n].remaining = fread(files[n].data, bytes, 1, files[n].fp);
 					if (files[n].remaining > 0) {
 						remaining++;
@@ -160,8 +161,7 @@ int main(int argc, char **argv) {
 
 					for (j = 0; j < n; j++) {
 						if (files[j].remaining) {
-							if (best < 0 ||
-							    memcmp(files[j].data, files[best].data, bytes) < 0) {
+							if (best < 0 || memcmp(files[j].data, files[best].data, bytes) < 0) {
 								best = j;
 							}
 						}
@@ -174,6 +174,13 @@ int main(int argc, char **argv) {
 
 					fwrite(files[best].data, bytes, 1, out);
 
+#if 0
+					for (j = 0; j < bytes; j++) {
+						printf("%02x ", files[best].data[j]);
+					}
+					printf("\n");
+#endif
+
 					files[best].remaining = fread(files[best].data, bytes, 1, files[best].fp);
 					if (files[best].remaining <= 0) {
 						remaining--;
@@ -184,6 +191,7 @@ int main(int argc, char **argv) {
 			}
 
 			for (j = 0; j < n; j++) {
+				free(files[j].data);
 				fclose(files[j].fp);
 			}
 		}
