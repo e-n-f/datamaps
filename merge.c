@@ -175,20 +175,18 @@ int main(int argc, char **argv) {
 						break;
 					}
 
-					if (memcmp(wrote, files[best].data, bytes) > 0) {
-						printf("??? out of order:\n");
-						for (j = 0; j < bytes; j++) {
-							printf("%02x ", wrote[j]);
+					int skip = 0;
+					if (uniq) {
+						if (memcmp(wrote, files[best].data, bytes) == 0) {
+							skip = 1;
 						}
-						printf(" vs ");
-						for (j = 0; j < bytes; j++) {
-							printf("%02x ", files[best].data[j]);
-						}
-						printf("\n");
+
+						memcpy(wrote, files[best].data, bytes);
 					}
 
-					memcpy(wrote, files[best].data, bytes);
-					fwrite(files[best].data, bytes, 1, out);
+					if (!skip) {
+						fwrite(files[best].data, bytes, 1, out);
+					}
 
 					files[best].remaining = fread(files[best].data, bytes, 1, files[best].fp);
 					if (files[best].remaining <= 0) {
