@@ -67,16 +67,27 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 			}
 		}
 
-		if (n == 0) {
-			fprintf(stderr, "No valid points in %s", s);
-			continue;
-		}
-
 		// Project each point to web mercator
 
 		int i;
 		for (i = 0; i < n; i++) {
+			if (lat[i] > 85.0511 || lat[i] < -85.0511) {
+				fprintf(stderr, "Can't represent latitude %f\n", lat[i]);
+				n = 0;
+				break;
+			}
+			if (lon[i] >= 180 || lon[i] <= -180) {
+				fprintf(stderr, "Can't represent longitude %f\n", lon[i]);
+				n = 0;
+				break;
+			}
+
 			latlon2tile(lat[i], lon[i], 32, &x[i], &y[i]);
+		}
+
+		if (n == 0) {
+			fprintf(stderr, "No valid points in %s", s);
+			continue;
 		}
 
 		// If this is a polyline, find out how many leading bits in common
