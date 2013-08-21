@@ -293,7 +293,7 @@ int main(int argc, char **argv) {
 			files->legs, files->level);
 
 		int page = getpagesize();
-		long long unit = (5 * 1024 * 1024 / bytes) * bytes;
+		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
 		while (unit % page != 0) {
 			unit += bytes;
 		}
