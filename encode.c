@@ -157,20 +157,40 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 struct merge {
 	long long start;
 	long long end;
-	unsigned char *map;
-	int bytes;
 };
 
-int mergecmp(const void *v1, const void *v2) {
-	const struct merge *m1 = v1;
-	const struct merge *m2 = v2;
+void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes) {
+	int remaining = 0;
+	int i;
 
-	return memcmp(m1->map + m1->start, m2->map + m2->start, m1->bytes);
-}
+	for (i = 0; i < nmerges; i++) {
+		if (merges[i].start < merges[i].end) {
+			remaining++;
+		}
+	}
 
-void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f) {
-	while (1) {
-		qsort(merges, nmerges, sizeof(struct merge *), mergecmp);
+	while (remaining) {
+		int best = -1;
+
+		for (i = 0; i < nmerges; i++) {
+			if (merges[i].start < merges[i].end) {
+				if (best < 0 ||
+				    memcmp(map + merges[i].start, map + merges[best].start, bytes) < 0) {
+					best = i;
+				}
+			}
+		}
+
+		if (best < 0) {
+			fprintf(stderr, "can't happen");
+			break;
+		}
+
+		fwrite(map + merges[best].start, bytes, 1, f);
+		merges[best].start += bytes;
+		if (merges[best].start >= merges[best].end) {
+			remaining--;
+		}
 	}
 }
 
@@ -273,7 +293,7 @@ int main(int argc, char **argv) {
 			files->legs, files->level);
 
 		int page = getpagesize();
-		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
+		long long unit = (5 * 1024 * 1024 / bytes) * bytes;
 		while (unit % page != 0) {
 			unit += bytes;
 		}
@@ -288,7 +308,7 @@ int main(int argc, char **argv) {
 				end = st.st_size;
 			}
 
-			fprintf(stderr, "part %lld of %lld (start %lld end %lld)\n", start / unit + 1, nmerges, start, end);
+			fprintf(stderr, "part %lld of %d (start %lld end %lld)\n", start / unit + 1, nmerges, start, end);
 
 			merges[start / unit].start = start;
 			merges[start / unit].end = end;
@@ -333,12 +353,7 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
-		for (i = 0; i < nmerges; i++) {
-			merges[i].bytes = bytes;
-			merges[i].map = map;
-		}
-
-		merge(merges, nmerges, map, f);
+		merge(merges, nmerges, map, f, bytes);
 
 		munmap(map, st.st_size);
 		fclose(f);
