@@ -60,8 +60,8 @@ Census Dotmap</a>.  The vector indexing is along similar lines but uses a
 hierarchy of files for vectors that fit in different zoom levels,
 and I don't know if anybody else does it that way.
 
-Encoding currently assumes you can <code>mmap</code> an entire file into
-memory and sort it in place, so be careful about large files
-on small machines.  Rendering also <code>mmap</code>s the entire file,
-but it's read-only so it's not so bad if it doesn't all fit.
-Large files will not work on 32-bit operating systems.
+Both encoding and rendering assume they can <code>mmap</code>
+an entire copy of the file into the process address space,
+which isn't going to work for large files on 32-bit machines.
+Performance will be much better if the file actually fits
+in memory instead of having to be swapped in.
