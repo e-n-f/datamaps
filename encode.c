@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
 			(long long) st.st_size / bytes,
 			files->legs, files->level);
 
-		int page = getpagesize();
+		int page = sysconf(_SC_PAGESIZE);
 		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
 		while (unit % page != 0) {
 			unit += bytes;
