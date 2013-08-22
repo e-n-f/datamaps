@@ -168,39 +168,39 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 struct merge {
 	long long start;
 	long long end;
+
+	struct merge *next;
 };
 
+void insert(struct merge *m, struct merge **head, unsigned char *map, int bytes) {
+	while (*head != NULL && memcmp(map + m->start, map + (*head)->start, bytes) > 0) {
+		head = &((*head)->next);
+	}
+
+	m->next = *head;
+	*head = m;
+}
+
 void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes) {
-	int remaining = 0;
 	int i;
+	struct merge *head = NULL;
 
 	for (i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
-			remaining++;
+			insert(&(merges[i]), &head, map, bytes);
 		}
 	}
 
-	while (remaining) {
-		int best = -1;
+	while (head != NULL) {
+		fwrite(map + head->start, bytes, 1, f);
+		head->start += bytes;
 
-		for (i = 0; i < nmerges; i++) {
-			if (merges[i].start < merges[i].end) {
-				if (best < 0 ||
-				    memcmp(map + merges[i].start, map + merges[best].start, bytes) < 0) {
-					best = i;
-				}
-			}
-		}
+		struct merge *m = head;
+		head = m->next;
+		m->next = NULL;
 
-		if (best < 0) {
-			fprintf(stderr, "can't happen");
-			break;
-		}
-
-		fwrite(map + merges[best].start, bytes, 1, f);
-		merges[best].start += bytes;
-		if (merges[best].start >= merges[best].end) {
-			remaining--;
+		if (m->start < m->end) {
+			insert(m, &head, map, bytes);
 		}
 	}
 }
@@ -323,6 +323,7 @@ int main(int argc, char **argv) {
 
 			merges[start / unit].start = start;
 			merges[start / unit].end = end;
+			merges[start / unit].next = NULL;
 
 			void *map = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, start);
 			if (map == MAP_FAILED) {
