@@ -63,16 +63,25 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			fg = 0;
 		}
 
+		if (src[i] != 0) {
+			if (gamma != 1) {
+				src[i] = exp(log(src[i]) * gamma);
+			}
+		}
+
+		if (mask) {
+			src[i] = limit - src[i];
+			if (src[i] < 0) {
+				src[i] = 0;
+			}
+		}
+
 		if (src[i] == 0) {
 			buf[4 * i + 0] = bg;
 			buf[4 * i + 1] = bg;
 			buf[4 * i + 2] = bg;
 			buf[4 * i + 3] = transparency;
 		} else {
-			if (gamma != 1) {
-				src[i] = exp(log(src[i]) * gamma);
-			}
-
 			if (sat != 0) {
 #define COLOR_CAP .7
 				if (src[i] > limit2 * COLOR_CAP) {
@@ -108,10 +117,6 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 				buf[4 * i + 2] = fg;
 				buf[4 * i + 3] = 255;
 			}
-		}
-
-		if (mask) {
-			buf[4 * i + 3] = 255 - buf[4 * i + 3];
 		}
 	}
 
