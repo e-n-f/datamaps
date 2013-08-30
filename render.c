@@ -28,7 +28,7 @@ int antialias = 1;
 double mercator = -1;
 int multiplier = 1;
 
-void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn);
+void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass);
 
 int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
@@ -276,7 +276,18 @@ int main(int argc, char **argv) {
 	int saturate = 1;
 	int mask = 0;
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:sm")) != -1) {
+	struct file {
+		char *name;
+		int mapbits;
+		int metabits;
+		int maxn;
+		int bytes;
+	};
+
+	int nfiles = 0;
+	struct file files[argc];
+
+	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:smf:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -362,6 +373,10 @@ int main(int argc, char **argv) {
 			invert = 1;
 			break;
 
+		case 'f':
+			files[nfiles++].name = optarg;
+			break;
+
 		default:
 			usage(argv);
 		}
@@ -377,30 +392,31 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	char *fname = argv[optind];
+	files[nfiles++].name = argv[optind];
 	unsigned int z_draw = atoi(argv[optind + 1]);
 
-	char meta[strlen(fname) + 1 + 4 + 1];
-	sprintf(meta, "%s/meta", fname);
-	FILE *f = fopen(meta, "r");
-	if (f == NULL) {
-		perror(meta);
-		exit(EXIT_FAILURE);
-	}
+	for (i = 0; i < nfiles; i++) {
+		char meta[strlen(files[i].name) + 1 + 4 + 1];
+		sprintf(meta, "%s/meta", files[i].name);
+		FILE *f = fopen(meta, "r");
+		if (f == NULL) {
+			perror(meta);
+			exit(EXIT_FAILURE);
+		}
 
-	char s[2000] = "";
-	if (fgets(s, 2000, f) == NULL || strcmp(s, "1\n") != 0) {
-		fprintf(stderr, "%s: Unknown version %s", meta, s);
-		exit(EXIT_FAILURE);
-	}
-	int mapbits, metabits, maxn;
-	if (fgets(s, 2000, f) == NULL || sscanf(s, "%d %d %d", &mapbits, &metabits, &maxn) != 3) {
-		fprintf(stderr, "%s: couldn't find size declaration", meta);
-		exit(EXIT_FAILURE);
-	}
-	fclose(f);
+		char s[2000] = "";
+		if (fgets(s, 2000, f) == NULL || strcmp(s, "1\n") != 0) {
+			fprintf(stderr, "%s: Unknown version %s", meta, s);
+			exit(EXIT_FAILURE);
+		}
+		if (fgets(s, 2000, f) == NULL || sscanf(s, "%d %d %d", &files[i].mapbits, &files[i].metabits, &files[i].maxn) != 3) {
+			fprintf(stderr, "%s: couldn't find size declaration", meta);
+			exit(EXIT_FAILURE);
+		}
+		fclose(f);
 
-	int bytes = (mapbits + metabits + 7) / 8;
+		files[i].bytes = (files[i].mapbits + files[i].metabits + 7) / 8;
+	}
 
 	double image[256 * 256];
 	double cx[256 * 256], cy[256 * 256];
@@ -445,7 +461,9 @@ int main(int argc, char **argv) {
 			for (y = y1; y <= y2; y++) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
 
-				do_tile(image, cx, cy, z_draw, x, y, bytes, colors, fname, mapbits, metabits, gps, dump, maxn);
+				for (i = 0; i < nfiles; i++) {
+					do_tile(image, cx, cy, z_draw, x, y, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i);
+				}
 
 				if (!dump) {
 					int xx, yy;
@@ -471,7 +489,9 @@ int main(int argc, char **argv) {
 		unsigned int x_draw = atoi(argv[optind + 2]);
 		unsigned int y_draw = atoi(argv[optind + 3]);
 
-		do_tile(image, cx, cy, z_draw, x_draw, y_draw, bytes, colors, fname, mapbits, metabits, gps, dump, maxn);
+		for (i = 0; i < nfiles; i++) {
+			do_tile(image, cx, cy, z_draw, x_draw, y_draw, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i);
+		}
 
 		if (!dump) {
 			out(image, cx, cy, 256, 256, transparency, display_gamma, invert, color, saturate, mask);
@@ -482,12 +502,14 @@ int main(int argc, char **argv) {
 }
 
 void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw,
-		int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn) {
+		int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass) {
 	int i;
 
-	memset(image, 0, 256 * 256 * sizeof(double));
-	memset(cx, 0, 256 * 256 * sizeof(double));
-	memset(cy, 0, 256 * 256 * sizeof(double));
+	if (pass == 0) {
+		memset(image, 0, 256 * 256 * sizeof(double));
+		memset(cx, 0, 256 * 256 * sizeof(double));
+		memset(cy, 0, 256 * 256 * sizeof(double));
+	}
 
 	// Do the single-point case
 
