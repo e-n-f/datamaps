@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 	struct tile {
 		int xtile;
 		int ytile;
-		int count;
+		long long count;
 		double len;
 		long long xsum;
 		long long ysum;
@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
 						tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
 							    32, &lat, &lon);
 
-						printf("%s %d %d %d %d %lf,%lf",
+						printf("%s %d %d %d %lld %lf,%lf",
 							fname,
 							z,
 							tile[z].xtile,
@@ -267,7 +267,7 @@ int main(int argc, char **argv) {
 				tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
 					    32, &lat, &lon);
 
-				printf("%s %d %d %d %d %lf,%lf",
+				printf("%s %d %d %d %lld %lf,%lf",
 					fname,
 					z,
 					tile[z].xtile,
