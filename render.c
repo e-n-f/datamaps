@@ -44,7 +44,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 	int fd = open(fn, O_RDONLY);
 	if (fd < 0) {
-		perror(fn);
+		// perror(fn);
 		return ret;
 	}
 
