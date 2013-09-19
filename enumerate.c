@@ -29,6 +29,101 @@ int filecmp(const void *v1, const void *v2) {
 	return memcmp((*f1)->buf, (*f2)->buf, gSortBytes);
 }
 
+struct tile {
+	int xtile;
+	int ytile;
+	long long count;
+	double len;
+	long long xsum;
+	long long ysum;
+	int sibling[2][2];
+};
+
+void handle(long long xx, long long yy, struct tile *tile, char *fname, int minzoom, int maxzoom, int showdist, unsigned int *x, unsigned int *y, struct file **files, int sibling) {
+	double lat, lon;
+	int z;
+
+	for (z = minzoom; z <= maxzoom; z++) {
+		if (tile[z].xtile != xx >> (32 - z) ||
+		    tile[z].ytile != yy >> (32 - z)) {
+			if (tile[z].count > 0) {
+				tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
+					    32, &lat, &lon);
+
+				printf("%s %d %d %d %lld %lf,%lf",
+					fname,
+					z,
+					tile[z].xtile,
+					tile[z].ytile,
+					tile[z].count,
+					lat, lon);
+
+				if (showdist) {
+					printf(" %f", tile[z].len);
+				}
+
+				int qx = tile[z].xtile % 2;
+				int qy = tile[z].ytile % 2;
+				tile[z].sibling[qx][qy] = 1;
+
+				printf("\n");
+			}
+
+			if (sibling && tile[z].xtile >= 0 && z > 0) {
+				if (tile[z].xtile / 2 != (xx >> (32 - z)) / 2 ||
+				    tile[z].ytile / 2 != (yy >> (32 - z)) / 2) {
+					int qx, qy;
+					for (qx = 0; qx < 2; qx++) {
+						for (qy = 0; qy < 2; qy++) {
+							if (tile[z].sibling[qx][qy] == 0) {
+								printf("%s %d %d %d 0 x,x\n",
+									fname, z,
+									tile[z].xtile / 2 * 2 + qx,
+									tile[z].ytile / 2 * 2 + qy);
+
+								if (showdist) {
+									printf(" %f", 0.0);
+								}
+							}
+						}
+					}
+
+					memset(tile[z].sibling, 0, sizeof(tile[z].sibling));
+				}
+			}
+
+			tile[z].xtile = xx >> (32 - z);
+			tile[z].ytile = yy >> (32 - z);
+			tile[z].count = 0;
+			tile[z].len = 0;
+			tile[z].xsum = tile[z].ysum = 0;
+		}
+
+		tile[z].count++;
+		tile[z].xsum += xx;
+		tile[z].ysum += yy;
+
+		if (showdist && x != NULL) {
+			int i;
+			double dist = 0;
+			double max = 1LL << (32 - z);
+
+			for (i = 0; i + 1 < files[0]->components; i++) {
+				double d1 = (long long) x[i] - x[i + 1];
+				double d2 = (long long) y[i] - y[i + 1];
+				double d = sqrt(d1 * d1 + d2 * d2);
+
+#define MAX 6400  /* ~200 feet */
+				if (d < MAX) {
+					dist += sqrt(d1 * d1 + d2 * d2) / max;
+				}
+			}
+
+			tile[z].len += dist;
+		}
+	}
+}
+
 int main(int argc, char **argv) {
 	int i;
 	extern int optind;
@@ -112,16 +207,6 @@ int main(int argc, char **argv) {
 	struct file *files[depth * maxn];
 	int nfiles = 0;
 
-	struct tile {
-		int xtile;
-		int ytile;
-		long long count;
-		double len;
-		long long xsum;
-		long long ysum;
-		int sibling[2][2];
-	};
-
 	struct tile tile[maxzoom + 1];
 
 	for (i = 0; i <= maxzoom; i++) {
@@ -201,90 +286,9 @@ int main(int argc, char **argv) {
 
 			printf("\n");
 		} else {
-			double lat, lon;
+			long long xx = x[0], yy = y[0];
 
-			int z;
-			for (z = minzoom; z <= maxzoom; z++) {
-				long long xx = x[0], yy = y[0];
-
-				if (tile[z].xtile != xx >> (32 - z) ||
-				    tile[z].ytile != yy >> (32 - z)) {
-					if (tile[z].count > 0) {
-						tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
-							    32, &lat, &lon);
-
-						printf("%s %d %d %d %lld %lf,%lf",
-							fname,
-							z,
-							tile[z].xtile,
-							tile[z].ytile,
-							tile[z].count,
-							lat, lon);
-
-						if (showdist) {
-							printf(" %f", tile[z].len);
-						}
-
-						int qx = tile[z].xtile % 2;
-						int qy = tile[z].ytile % 2;
-						tile[z].sibling[qx][qy] = 1;
-
-						printf("\n");
-					}
-
-					if (sibling && tile[z].xtile >= 0 && z > 0) {
-						if (tile[z].xtile / 2 != (xx >> (32 - z)) / 2 ||
-						    tile[z].ytile / 2 != (yy >> (32 - z)) / 2) {
-							int qx, qy;
-							for (qx = 0; qx < 2; qx++) {
-								for (qy = 0; qy < 2; qy++) {
-									if (tile[z].sibling[qx][qy] == 0) {
-										printf("%s %d %d %d 0 x,x\n",
-											fname, z,
-											tile[z].xtile / 2 * 2 + qx,
-											tile[z].ytile / 2 * 2 + qy);
-
-										if (showdist) {
-											printf(" %f", 0.0);
-										}
-									}
-								}
-							}
-
-							memset(tile[z].sibling, 0, sizeof(tile[z].sibling));
-						}
-					}
-
-					tile[z].xtile = xx >> (32 - z);
-					tile[z].ytile = yy >> (32 - z);
-					tile[z].count = 0;
-					tile[z].len = 0;
-					tile[z].xsum = tile[z].ysum = 0;
-				}
-
-				tile[z].count++;
-				tile[z].xsum += xx;
-				tile[z].ysum += yy;
-
-				if (showdist) {
-					int i;
-					double dist = 0;
-					double max = 1LL << (32 - z);
-
-					for (i = 0; i + 1 < files[0]->components; i++) {
-						double d1 = (long long) x[i] - x[i + 1];
-						double d2 = (long long) y[i] - y[i + 1];
-						double d = sqrt(d1 * d1 + d2 * d2);
-
-#define MAX 6400  /* ~200 feet */
-						if (d < MAX) {
-							dist += sqrt(d1 * d1 + d2 * d2) / max;
-						}
-					}
-
-					tile[z].len += dist;
-				}
-			}
+			handle(xx, yy, tile, fname, minzoom, maxzoom, showdist, x, y, files, sibling);
 		}
 
 		if (fread(files[0]->buf, files[0]->bytes, 1, files[0]->f) != 1) {
@@ -293,55 +297,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (!all) {
-		double lat, lon;
-
-		int z;
-		for (z = minzoom; z <= maxzoom; z++) {
-			if (tile[z].count > 0) {
-				tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
-					    32, &lat, &lon);
-
-				printf("%s %d %d %d %lld %lf,%lf",
-					fname,
-					z,
-					tile[z].xtile,
-					tile[z].ytile,
-					tile[z].count,
-					lat, lon);
-
-				if (showdist) {
-					printf(" %f", tile[z].len);
-				}
-
-				printf("\n");
-
-				int qx = tile[z].xtile % 2;
-				int qy = tile[z].ytile % 2;
-				tile[z].sibling[qx][qy] = 1;
-			}
-
-			if (sibling && tile[z].xtile >= 0 && z > 0) {
-				{
-					int qx, qy;
-					for (qx = 0; qx < 2; qx++) {
-						for (qy = 0; qy < 2; qy++) {
-							if (tile[z].sibling[qx][qy] == 0) {
-								printf("%s %d %d %d 0 x,x\n",
-									fname, z,
-									tile[z].xtile / 2 * 2 + qx,
-									tile[z].ytile / 2 * 2 + qy);
-
-								if (showdist) {
-									printf(" %f", 0.0);
-								}
-							}
-						}
-					}
-
-					memset(tile[z].sibling, 0, sizeof(tile[z].sibling));
-				}
-			}
-		}
+		handle(-1, -1, tile, fname, minzoom, maxzoom, showdist, NULL, NULL, files, sibling);
 	}
 
 	return 0;
