@@ -76,10 +76,15 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 					for (qx = 0; qx < 2; qx++) {
 						for (qy = 0; qy < 2; qy++) {
 							if (tile[z].sibling[qx][qy] == 0) {
-								printf("%s %d %d %d 0 x,x",
+								tile2latlon(tile[z].xtile / 2 * 2 + qx,
+									    tile[z].ytile / 2 * 2 + qy,
+									    z, &lat, &lon);
+
+								printf("%s %d %d %d 0 %lf,%lf",
 									fname, z,
 									tile[z].xtile / 2 * 2 + qx,
-									tile[z].ytile / 2 * 2 + qy);
+									tile[z].ytile / 2 * 2 + qy,
+								        lat, lon);
 
 								if (showdist) {
 									printf(" %f", 0.0);
