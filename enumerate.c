@@ -76,7 +76,7 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 					for (qx = 0; qx < 2; qx++) {
 						for (qy = 0; qy < 2; qy++) {
 							if (tile[z].sibling[qx][qy] == 0) {
-								printf("%s %d %d %d 0 x,x\n",
+								printf("%s %d %d %d 0 x,x",
 									fname, z,
 									tile[z].xtile / 2 * 2 + qx,
 									tile[z].ytile / 2 * 2 + qy);
@@ -84,6 +84,8 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 								if (showdist) {
 									printf(" %f", 0.0);
 								}
+
+								printf("\n");
 							}
 						}
 					}
