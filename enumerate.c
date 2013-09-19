@@ -37,9 +37,10 @@ int main(int argc, char **argv) {
 	int maxzoom = -1;
 	int minzoom = 0;
 	int showdist = 0;
+	int sibling = 0;
 	int all = 0;
 
-	while ((i = getopt(argc, argv, "z:Z:ad")) != -1) {
+	while ((i = getopt(argc, argv, "z:Z:ads")) != -1) {
 		switch (i) {
 		case 'z':
 			maxzoom = atoi(optarg);
@@ -51,6 +52,10 @@ int main(int argc, char **argv) {
 
 		case 'd':
 			showdist = 1;
+			break;
+
+		case 's':
+			sibling = 1;
 			break;
 
 		case 'a':
@@ -114,6 +119,7 @@ int main(int argc, char **argv) {
 		double len;
 		long long xsum;
 		long long ysum;
+		int sibling[2][2];
 	};
 
 	struct tile tile[maxzoom + 1];
@@ -123,6 +129,7 @@ int main(int argc, char **argv) {
 		tile[i].count = 0;
 		tile[i].len = 0;
 		tile[i].xsum = tile[i].ysum = 0;
+		memset(tile[i].sibling, 0, sizeof(tile[i].sibling));
 	}
 
 	int z_lookup;
@@ -218,7 +225,34 @@ int main(int argc, char **argv) {
 							printf(" %f", tile[z].len);
 						}
 
+						int qx = tile[z].xtile % 2;
+						int qy = tile[z].ytile % 2;
+						tile[z].sibling[qx][qy] = 1;
+
 						printf("\n");
+					}
+
+					if (sibling && tile[z].xtile >= 0 && z > 0) {
+						if (tile[z].xtile / 2 != (xx >> (32 - z)) / 2 ||
+						    tile[z].ytile / 2 != (yy >> (32 - z)) / 2) {
+							int qx, qy;
+							for (qx = 0; qx < 2; qx++) {
+								for (qy = 0; qy < 2; qy++) {
+									if (tile[z].sibling[qx][qy] == 0) {
+										printf("%s %d %d %d 0 x,x\n",
+											fname, z,
+											tile[z].xtile / 2 * 2 + qx,
+											tile[z].ytile / 2 * 2 + qy);
+
+										if (showdist) {
+											printf(" %f", 0.0);
+										}
+									}
+								}
+							}
+
+							memset(tile[z].sibling, 0, sizeof(tile[z].sibling));
+						}
 					}
 
 					tile[z].xtile = xx >> (32 - z);
@@ -280,6 +314,32 @@ int main(int argc, char **argv) {
 				}
 
 				printf("\n");
+
+				int qx = tile[z].xtile % 2;
+				int qy = tile[z].ytile % 2;
+				tile[z].sibling[qx][qy] = 1;
+			}
+
+			if (sibling && tile[z].xtile >= 0 && z > 0) {
+				{
+					int qx, qy;
+					for (qx = 0; qx < 2; qx++) {
+						for (qy = 0; qy < 2; qy++) {
+							if (tile[z].sibling[qx][qy] == 0) {
+								printf("%s %d %d %d 0 x,x\n",
+									fname, z,
+									tile[z].xtile / 2 * 2 + qx,
+									tile[z].ytile / 2 * 2 + qy);
+
+								if (showdist) {
+									printf(" %f", 0.0);
+								}
+							}
+						}
+					}
+
+					memset(tile[z].sibling, 0, sizeof(tile[z].sibling));
+				}
 			}
 		}
 	}
