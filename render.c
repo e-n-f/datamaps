@@ -273,6 +273,7 @@ int main(int argc, char **argv) {
 	int assemble = 0;
 	int invert = 0;
 	int color = -1;
+	int color2 = -1;
 	int saturate = 1;
 	int mask = 0;
 
@@ -287,7 +288,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:smf:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:smf:S:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -315,6 +316,10 @@ int main(int argc, char **argv) {
 
 		case 'c':
 			color = strtoul(optarg, NULL, 16);
+			break;
+
+		case 'S':
+			color2 = strtoul(optarg, NULL, 16);
 			break;
 
 		case 'B':
@@ -483,7 +488,7 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1));
-			out(image2, cx2, cy2, 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1), transparency, display_gamma, invert, color, saturate, mask);
+			out(image2, cx2, cy2, 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1), transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	} else {
 		unsigned int x_draw = atoi(argv[optind + 2]);
@@ -494,7 +499,7 @@ int main(int argc, char **argv) {
 		}
 
 		if (!dump) {
-			out(image, cx, cy, 256, 256, transparency, display_gamma, invert, color, saturate, mask);
+			out(image, cx, cy, 256, 256, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	}
 

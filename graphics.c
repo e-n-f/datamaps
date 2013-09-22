@@ -10,7 +10,7 @@
 #error libpng >= 1.6 is required
 #endif
 
-void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int saturate, int mask) {
+void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
 	unsigned char *buf = malloc(width * height * 4);
 
 	int midr, midg, midb;
@@ -63,6 +63,17 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			fg = 0;
 		}
 
+		int r2, g2, b2;
+		if (color2 < 0) {
+			r2 = fg;
+			g2 = fg;
+			b2 = fg;
+		} else {
+			r2 = (color2 >> 16) & 0xFF;
+			g2 = (color2 >>  8) & 0xFF;
+			b2 = (color2 >>  0) & 0xFF;
+		}
+
 		if (src[i] != 0) {
 			if (gamma != 1) {
 				src[i] = exp(log(src[i]) * gamma);
@@ -107,14 +118,14 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 				buf[4 * i + 3] = opacity * 255;
 			} else if (src[i] <= limit2) {
 				double along = (src[i] - limit) / (limit2 - limit);
-				buf[4 * i + 0] = fg * along + midr * (1 - along);
-				buf[4 * i + 1] = fg * along + midg * (1 - along);
-				buf[4 * i + 2] = fg * along + midb * (1 - along);
+				buf[4 * i + 0] = r2 * along + midr * (1 - along);
+				buf[4 * i + 1] = g2 * along + midg * (1 - along);
+				buf[4 * i + 2] = b2 * along + midb * (1 - along);
 				buf[4 * i + 3] = 255;
 			} else {
-				buf[4 * i + 0] = fg;
-				buf[4 * i + 1] = fg;
-				buf[4 * i + 2] = fg;
+				buf[4 * i + 0] = r2;
+				buf[4 * i + 1] = g2;
+				buf[4 * i + 2] = b2;
 				buf[4 * i + 3] = 255;
 			}
 		}
