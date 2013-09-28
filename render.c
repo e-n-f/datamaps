@@ -423,7 +423,7 @@ int main(int argc, char **argv) {
 		files[i].bytes = (files[i].mapbits + files[i].metabits + 7) / 8;
 	}
 
-	double image[256 * 256];
+	double *image = graphics_init();
 	double cx[256 * 256], cy[256 * 256];
 
 	if (assemble) {
@@ -511,7 +511,6 @@ void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigne
 	int i;
 
 	if (pass == 0) {
-		memset(image, 0, 256 * 256 * sizeof(double));
 		memset(cx, 0, 256 * 256 * sizeof(double));
 		memset(cy, 0, 256 * 256 * sizeof(double));
 	}

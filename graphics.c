@@ -10,6 +10,13 @@
 #error libpng >= 1.6 is required
 #endif
 
+double *graphics_init() {
+	double *image = malloc(256 * 256 * sizeof(double));
+
+	memset(image, 0, 256 * 256 * sizeof(double));
+	return image;
+}
+
 void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
 	unsigned char *buf = malloc(width * height * 4);
 
