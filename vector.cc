@@ -53,6 +53,17 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	std::cout << s;
 }
 
+static void op(env *e, int cmd, int x, int y) {
+	int dx = x - e->x;
+	int dy = y - e->y;
+
+	e->feature->add_geometry(cmd);
+	e->feature->add_geometry((dx << 1) ^ (dx >> 31));
+	e->feature->add_geometry((dy << 1) ^ (dy >> 31));
+	e->x = x;
+	e->y = y;
+}
+
 int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias, double thick) {
 	int accept = clip(&x0, &y0, &x1, &y1, 0, 0, XMAX / 16.0, YMAX / 16.0);
 
@@ -92,17 +103,8 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 
 		env *e = (env *) image;
 
-		e->feature->add_geometry(MOVE_TO);
-		e->feature->add_geometry(xx0 - e->x);
-		e->feature->add_geometry(yy0 - e->y);
-		e->x = xx0;
-		e->y = yy0;
-
-		e->feature->add_geometry(LINE_TO);
-		e->feature->add_geometry(xx1 - e->x);
-		e->feature->add_geometry(yy1 - e->y);
-		e->x = xx1;
-		e->y = yy1;
+		op(e, MOVE_TO, xx0, yy0);
+		op(e, LINE_TO, xx1, yy1);
 
 		e->feature->add_geometry(CLOSE_PATH);
 	}
