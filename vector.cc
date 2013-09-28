@@ -7,23 +7,28 @@ extern "C" {
 	#include "graphics.h"
 }
 
+class env {
+public:
+	mapnik::vector::tile tile;
+};
+
 double *graphics_init() {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-	mapnik::vector::tile *t = new mapnik::vector::tile;
+	env *e = new env;
 
-	mapnik::vector::tile_layer *l = t->add_layers();
+	mapnik::vector::tile_layer *l = e->tile.add_layers();
 	l->set_name("layer");
 	l->set_version(1);
 
-	return (double *) t;
+	return (double *) e;
 }
 
 void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
-	mapnik::vector::tile *t = (mapnik::vector::tile *) src;
+	env *e = (env *) src;
 
 	std::string s;
-	t->SerializeToString(&s);
+	e->tile.SerializeToString(&s);
 
 	std::cout << s;
 }
