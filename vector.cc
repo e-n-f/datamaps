@@ -14,6 +14,8 @@ extern "C" {
 class env {
 public:
 	mapnik::vector::tile tile;
+	mapnik::vector::tile_layer *layer;
+	mapnik::vector::tile_feature *feature;
 };
 
 double *graphics_init() {
@@ -21,10 +23,13 @@ double *graphics_init() {
 
 	env *e = new env;
 
-	mapnik::vector::tile_layer *l = e->tile.add_layers();
-	l->set_name("layer");
-	l->set_version(1);
-	l->set_extent(4096);
+	e->layer = e->tile.add_layers();
+	e->layer->set_name("layer");
+	e->layer->set_version(1);
+	e->layer->set_extent(4096);
+
+	e->feature = e->layer->add_features();
+	e->feature->set_type(mapnik::vector::tile::LineString);
 
 	return (double *) e;
 }
@@ -47,7 +52,7 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 		int xx1 = x1 * 16;
 		int yy1 = y1 * 16;
 
-		// Guarding against rounding error;
+		// Guarding against rounding error
 
 		if (xx0 < 0) {
 			xx0 = 0;
@@ -60,6 +65,19 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 		}
 		if (yy0 > 4095) {
 			yy0 = 4095;
+		}
+
+		if (xx1 < 0) {
+			xx1 = 0;
+		}
+		if (xx1 > 4095) {
+			xx1 = 4095;
+		}
+		if (yy1 < 0) {
+			yy1 = 0;
+		}
+		if (yy1 > 4095) {
+			yy1 = 4095;
 		}
 	}
 
