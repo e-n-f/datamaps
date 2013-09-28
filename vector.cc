@@ -16,7 +16,14 @@ public:
 	mapnik::vector::tile tile;
 	mapnik::vector::tile_layer *layer;
 	mapnik::vector::tile_feature *feature;
+
+	int x;
+	int y;
 };
+
+#define MOVE_TO 1
+#define LINE_TO 2
+#define CLOSE_PATH 7
 
 double *graphics_init() {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -30,6 +37,9 @@ double *graphics_init() {
 
 	e->feature = e->layer->add_features();
 	e->feature->set_type(mapnik::vector::tile::LineString);
+
+	e->x = 0;
+	e->y = 0;
 
 	return (double *) e;
 }
@@ -79,6 +89,22 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 		if (yy1 > 4095) {
 			yy1 = 4095;
 		}
+
+		env *e = (env *) image;
+
+		e->feature->add_geometry(MOVE_TO);
+		e->feature->add_geometry(xx0 - e->x);
+		e->feature->add_geometry(yy0 - e->y);
+		e->x = xx0;
+		e->y = yy0;
+
+		e->feature->add_geometry(LINE_TO);
+		e->feature->add_geometry(xx1 - e->x);
+		e->feature->add_geometry(yy1 - e->y);
+		e->x = xx1;
+		e->y = yy1;
+
+		e->feature->add_geometry(CLOSE_PATH);
 	}
 
 	return 0;
