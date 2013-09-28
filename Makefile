@@ -4,7 +4,7 @@ PNG_CFLAGS=$(shell pkg-config libpng16 --cflags)
 PNG_LDFLAGS=$(shell pkg-config libpng16 --libs)
 
 ENCODE_OBJS = encode.o util.o
-RENDER_OBJS = render.o util.o graphics.o vector_tile.pb.o
+RENDER_OBJS = render.o util.o vector_tile.pb.o vector.o
 ENUMERATE_OBJS = enumerate.o util.o
 MERGE_OBJS = merge.o util.o
 
