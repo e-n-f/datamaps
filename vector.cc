@@ -3,8 +3,12 @@
 #include <string>
 #include "vector_tile.pb.h"
 
+#define XMAX 4096
+#define YMAX 4096
+
 extern "C" {
 	#include "graphics.h"
+	#include "clip.h"
 }
 
 class env {
@@ -20,6 +24,7 @@ double *graphics_init() {
 	mapnik::vector::tile_layer *l = e->tile.add_layers();
 	l->set_name("layer");
 	l->set_version(1);
+	l->set_extent(4096);
 
 	return (double *) e;
 }
@@ -34,6 +39,30 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 }
 
 int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias, double thick) {
+	int accept = clip(&x0, &y0, &x1, &y1, 0, 0, XMAX / 16.0, YMAX / 16.0);
+
+	if (accept) {
+		int xx0 = x0 * 16;
+		int yy0 = y0 * 16;
+		int xx1 = x1 * 16;
+		int yy1 = y1 * 16;
+
+		// Guarding against rounding error;
+
+		if (xx0 < 0) {
+			xx0 = 0;
+		}
+		if (xx0 > 4095) {
+			xx0 = 4095;
+		}
+		if (yy0 < 0) {
+			yy0 = 0;
+		}
+		if (yy0 > 4095) {
+			yy0 = 4095;
+		}
+	}
+
 	return 0;
 }
 
