@@ -87,6 +87,7 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	env *e = (env *) src;
 
 	if (e->cmd_idx >= 0) {
+		//printf("old command: %d %d\n", e->cmd, e->length);
 		e->feature->set_geometry(e->cmd_idx, 
 			(e->length << CMD_BITS) |
 			(e->cmd & ((1 << CMD_BITS) - 1)));
@@ -104,28 +105,32 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 
 static void op(env *e, int cmd, int x, int y) {
 	if (cmd != e->cmd) {
-		if (e->cmd_idx <= 0) {
+		if (e->cmd_idx >= 0) {
+			//printf("old command: %d %d\n", e->cmd, e->length);
 			e->feature->set_geometry(e->cmd_idx, 
 				(e->length << CMD_BITS) |
 				(e->cmd & ((1 << CMD_BITS) - 1)));
-
-			e->cmd = cmd;
-			e->length = 0;
-			e->cmd_idx = e->feature->geometry_size();
-
-			e->feature->add_geometry(0); // placeholder
 		}
+
+		e->cmd = cmd;
+		e->length = 0;
+		e->cmd_idx = e->feature->geometry_size();
+
+		e->feature->add_geometry(0); // placeholder
 	}
 
 	if (cmd == MOVE_TO || cmd == LINE_TO) {
 		int dx = x - e->x;
 		int dy = y - e->y;
+		//printf("new geom: %d %d\n", x, y);
 
 		e->feature->add_geometry((dx << 1) ^ (dx >> 31));
 		e->feature->add_geometry((dy << 1) ^ (dy >> 31));
 		
 		e->x = x;
 		e->y = y;
+		e->length++;
+	} else if (cmd == CLOSE_PATH) {
 		e->length++;
 	}
 }
@@ -171,6 +176,7 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 
 		op(e, MOVE_TO, xx0, yy0);
 		op(e, LINE_TO, xx1, yy1);
+		// op(e, CLOSE_PATH, 0, 0);
 	}
 
 	return 0;
