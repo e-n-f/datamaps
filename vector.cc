@@ -117,7 +117,9 @@ static void op(env *e, int cmd, int x, int y);
 void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
 	env *e = (env *) src;
 
+#ifdef CHAIN
 	qsort(e->lines, e->nlines, sizeof(struct line), linecmp);
+#endif
 
 	e->layer = e->tile.add_layers();
 	e->layer->set_name("world");
@@ -144,6 +146,7 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 
 		op(e, LINE_TO, e->lines[i].x1, e->lines[i].y1);
 
+#ifdef CHAIN
 		struct line l2;
 		l2.x0 = e->lines[i].x1;
 		l2.y0 = e->lines[i].y1;
@@ -171,6 +174,7 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 				break;
 			}
 		}
+#endif
 	}
 
 	if (e->cmd_idx >= 0) {
