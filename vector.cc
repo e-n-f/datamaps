@@ -19,6 +19,11 @@ struct line {
 	int y1;
 };
 
+struct point {
+	int x;
+	int y;
+};
+
 int linecmp(const void *v1, const void *v2) {
 	const struct line *l1 = (const struct line *) v1;
 	const struct line *l2 = (const struct line *) v2;
@@ -64,6 +69,10 @@ public:
 	struct line *lines;
 	int nlines;
 	int nlalloc;
+
+	struct point *points;
+	int npoints;
+	int npalloc;
 };
 
 #define MOVE_TO 1
@@ -79,6 +88,10 @@ double *graphics_init() {
 	e->nlalloc = 1024;
 	e->nlines = 0;
 	e->lines = (struct line *) malloc(e->nlalloc * sizeof(struct line));
+
+	e->npalloc = 1024;
+	e->npoints = 0;
+	e->points = (struct point *) malloc(e->npalloc * sizeof(struct point));
 
 	return (double *) e;
 }
@@ -184,6 +197,35 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			(e->cmd & ((1 << CMD_BITS) - 1)));
 	}
 
+	//////////////////////////////////
+
+	e->layer = e->tile.add_layers();
+	e->layer->set_name("points");
+	e->layer->set_version(1);
+	e->layer->set_extent(4096);
+
+	for (i = 0; i < e->npoints; i++) {
+		e->feature = e->layer->add_features();
+		e->feature->set_type(mapnik::vector::tile::Point);
+
+		e->x = 0;
+		e->y = 0;
+
+		e->cmd_idx = -1;
+		e->cmd = -1;
+		e->length = 0;
+
+		op(e, MOVE_TO, e->points[i].x, e->points[i].y);
+
+		if (e->cmd_idx >= 0) {
+			e->feature->set_geometry(e->cmd_idx, 
+				(e->length << CMD_BITS) |
+				(e->cmd & ((1 << CMD_BITS) - 1)));
+		}
+	}
+
+	//////////////////////////////////
+
 	std::string s;
 	e->tile.SerializeToString(&s);
 
@@ -286,9 +328,37 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 }
 
 void drawPixel(double x, double y, double *image, double *cx, double *cy, double bright, double hue) {
+	int xx = x * 16;
+	int yy = y * 16;
 
+	// Guarding against rounding error
+
+	if (xx < 0) {
+		xx = 0;
+	}
+	if (xx > 4095) {
+		xx = 4095;
+	}
+	if (yy < 0) {
+		yy = 0;
+	}
+	if (yy > 4095) {
+		yy = 4095;
+	}
+
+	env *e = (env *) image;
+
+	if (e->npoints + 1 >= e->npalloc) {
+		e->npalloc *= 2;
+		e->points = (struct point *) realloc((void *) e->points, e->npalloc * sizeof(struct point));
+	}
+
+	e->points[e->npoints].x = xx;
+	e->points[e->npoints].y = yy;
+
+	e->npoints++;
 }
 
 void drawBrush(double x, double y, double *image, double *cx, double *cy, double bright, double brush, double hue) {
-
+	drawPixel(x, y, image, cx, cy, bright, hue);
 }
