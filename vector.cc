@@ -20,11 +20,16 @@ public:
 
 	int x;
 	int y;
+
+	int cmd_idx;
+	int cmd;
+	int length;
 };
 
 #define MOVE_TO 1
 #define LINE_TO 2
 #define CLOSE_PATH 7
+#define CMD_BITS 3
 
 double *graphics_init() {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -32,7 +37,7 @@ double *graphics_init() {
 	env *e = new env;
 
 	e->layer = e->tile.add_layers();
-	e->layer->set_name("layer");
+	e->layer->set_name("world");
 	e->layer->set_version(1);
 	e->layer->set_extent(4096);
 
@@ -41,6 +46,10 @@ double *graphics_init() {
 
 	e->x = 0;
 	e->y = 0;
+
+	e->cmd_idx = -1;
+	e->cmd = -1;
+	e->length = 0;
 
 	return (double *) e;
 }
@@ -77,6 +86,12 @@ static inline int compress(std::string const& input, std::string & output)
 void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
 	env *e = (env *) src;
 
+	if (e->cmd_idx >= 0) {
+		e->feature->set_geometry(e->cmd_idx, 
+			(e->length << CMD_BITS) |
+			(e->cmd & ((1 << CMD_BITS) - 1)));
+	}
+
 	std::string s;
 	e->tile.SerializeToString(&s);
 
@@ -86,15 +101,33 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	std::cout << compressed;
 }
 
-static void op(env *e, int cmd, int x, int y) {
-	int dx = x - e->x;
-	int dy = y - e->y;
 
-	e->feature->add_geometry(cmd);
-	e->feature->add_geometry((dx << 1) ^ (dx >> 31));
-	e->feature->add_geometry((dy << 1) ^ (dy >> 31));
-	e->x = x;
-	e->y = y;
+static void op(env *e, int cmd, int x, int y) {
+	if (cmd != e->cmd) {
+		if (e->cmd_idx <= 0) {
+			e->feature->set_geometry(e->cmd_idx, 
+				(e->length << CMD_BITS) |
+				(e->cmd & ((1 << CMD_BITS) - 1)));
+
+			e->cmd = cmd;
+			e->length = 0;
+			e->cmd_idx = e->feature->geometry_size();
+
+			e->feature->add_geometry(0); // placeholder
+		}
+	}
+
+	if (cmd == MOVE_TO || cmd == LINE_TO) {
+		int dx = x - e->x;
+		int dy = y - e->y;
+
+		e->feature->add_geometry((dx << 1) ^ (dx >> 31));
+		e->feature->add_geometry((dy << 1) ^ (dy >> 31));
+		
+		e->x = x;
+		e->y = y;
+		e->length++;
+	}
 }
 
 int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias, double thick) {
@@ -138,8 +171,6 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 
 		op(e, MOVE_TO, xx0, yy0);
 		op(e, LINE_TO, xx1, yy1);
-
-		e->feature->add_geometry(CLOSE_PATH);
 	}
 
 	return 0;
