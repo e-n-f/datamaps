@@ -26,14 +26,26 @@ int linecmp(const void *v1, const void *v2) {
 	if (l1->x0 != l2->x0) {
 		return l1->x0 - l2->x0;
 	}
-	if (l1->x1 != l2->x1) {
-		return l1->x1 - l2->x1;
-	}
 	if (l1->y0 != l2->y0) {
 		return l1->y0 - l2->y0;
 	}
 
+	if (l1->x1 != l2->x1) {
+		return l1->x1 - l2->x1;
+	}
+
 	return l1->y1 - l2->y1;
+}
+
+int startcmp(const void *v1, const void *v2) {
+	const struct line *l1 = (const struct line *) v1;
+	const struct line *l2 = (const struct line *) v2;
+
+	if (l1->x0 != l2->x0) {
+		return l1->x0 - l2->x0;
+	}
+
+	return l1->y0 - l2->y0;
 }
 
 class env {
@@ -126,8 +138,39 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	for (i = 0; i < e->nlines; i++) {
 		// printf("draw %d %d to %d %d\n", e->lines[i].x0, e->lines[i].y0, e->lines[i].x1, e->lines[i].y1);
 
-		op(e, MOVE_TO, e->lines[i].x0, e->lines[i].y0);
+		if (e->lines[i].x0 != e->x || e->lines[i].y0 != e->y || e->length == 0) {
+			op(e, MOVE_TO, e->lines[i].x0, e->lines[i].y0);
+		}
+
 		op(e, LINE_TO, e->lines[i].x1, e->lines[i].y1);
+
+		struct line l2;
+		l2.x0 = e->lines[i].x1;
+		l2.y0 = e->lines[i].y1;
+
+		while (i < e->nlines) {
+			// printf("looking for %d,%d\n", l2.x0, l2.y0);
+			// printf("searching %d\n", e->nlines - i);
+
+			struct line *next = (struct line *) bsearch(&l2, e->lines + i, e->nlines - i,
+						sizeof(struct line), startcmp);
+
+			if (next != NULL) {
+				// printf("found %d,%d to %d,%d at %d\n", next->x0, next->y0, next->x1, next->y1, (int) (next - e->lines));
+
+				op(e, LINE_TO, next->x1, next->y1);
+
+				l2.x0 = next->x1;
+				l2.y0 = next->y1;
+
+				int n = next - e->lines;
+
+				memmove(e->lines + n, e->lines + n + 1, (e->nlines - (n + 1)) * sizeof(struct line));
+				e->nlines--;
+			} else {
+				break;
+			}
+		}
 	}
 
 	if (e->cmd_idx >= 0) {
@@ -147,6 +190,7 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 }
 
 static void op(env *e, int cmd, int x, int y) {
+	// printf("%d %d,%d\n", cmd, x, y);
 	// printf("from cmd %d to %d\n", e->cmd, cmd);
 
 	if (cmd != e->cmd) {
