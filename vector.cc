@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <zlib.h>
 #include "vector_tile.pb.h"
 
 #define XMAX 4096
@@ -44,13 +45,45 @@ double *graphics_init() {
 	return (double *) e;
 }
 
+// from mapnik-vector-tile/src/vector_tile_compression.hpp
+static inline int compress(std::string const& input, std::string & output)
+{
+	z_stream deflate_s;
+	deflate_s.zalloc = Z_NULL;
+	deflate_s.zfree = Z_NULL;
+	deflate_s.opaque = Z_NULL;
+	deflate_s.avail_in = 0;
+	deflate_s.next_in = Z_NULL;
+	deflateInit(&deflate_s, Z_DEFAULT_COMPRESSION);
+	deflate_s.next_in = (Bytef *)input.data();
+	deflate_s.avail_in = input.size();
+	size_t length = 0;
+	do {
+		size_t increase = input.size() / 2 + 1024;
+		output.resize(length + increase);
+		deflate_s.avail_out = increase;
+		deflate_s.next_out = (Bytef *)(output.data() + length);
+		int ret = deflate(&deflate_s, Z_FINISH);
+		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
+			return -1;
+		}
+		length += (increase - deflate_s.avail_out);
+	} while (deflate_s.avail_out == 0);
+	deflateEnd(&deflate_s);
+	output.resize(length);
+	return 0;
+}
+
 void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
 	env *e = (env *) src;
 
 	std::string s;
 	e->tile.SerializeToString(&s);
 
-	std::cout << s;
+	std::string compressed;
+	compress(s, compressed);
+
+	std::cout << compressed;
 }
 
 static void op(env *e, int cmd, int x, int y) {
