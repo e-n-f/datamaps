@@ -105,7 +105,7 @@ static void op(env *e, int cmd, int x, int y);
 void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
 	env *e = (env *) src;
 
-	// qsort(e->lines, e->nlines, sizeof(struct line), linecmp);
+	qsort(e->lines, e->nlines, sizeof(struct line), linecmp);
 
 	e->layer = e->tile.add_layers();
 	e->layer->set_name("world");
@@ -124,6 +124,8 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 
 	int i;
 	for (i = 0; i < e->nlines; i++) {
+		// printf("draw %d %d to %d %d\n", e->lines[i].x0, e->lines[i].y0, e->lines[i].x1, e->lines[i].y1);
+
 		op(e, MOVE_TO, e->lines[i].x0, e->lines[i].y0);
 		op(e, LINE_TO, e->lines[i].x1, e->lines[i].y1);
 	}
@@ -217,17 +219,19 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 
 		env *e = (env *) image;
 
-		if (e->nlines + 1 >= e->nlalloc) {
-			e->nlalloc *= 2;
-			e->lines = (struct line *) realloc((void *) e->lines, e->nlalloc * sizeof(struct line));
+		if (xx0 != xx1 || yy0 != yy1) {
+			if (e->nlines + 1 >= e->nlalloc) {
+				e->nlalloc *= 2;
+				e->lines = (struct line *) realloc((void *) e->lines, e->nlalloc * sizeof(struct line));
+			}
+
+			e->lines[e->nlines].x0 = xx0;
+			e->lines[e->nlines].y0 = yy0;
+			e->lines[e->nlines].x1 = xx1;
+			e->lines[e->nlines].y1 = yy1;
+
+			e->nlines++;
 		}
-
-		e->lines[e->nlines].x0 = xx0;
-		e->lines[e->nlines].y0 = yy0;
-		e->lines[e->nlines].x1 = xx1;
-		e->lines[e->nlines].y1 = yy1;
-
-		e->nlines++;
 	}
 
 	return 0;
