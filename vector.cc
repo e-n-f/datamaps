@@ -122,7 +122,7 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 #endif
 
 	e->layer = e->tile.add_layers();
-	e->layer->set_name("world");
+	e->layer->set_name("lines");
 	e->layer->set_version(1);
 	e->layer->set_extent(4096);
 
