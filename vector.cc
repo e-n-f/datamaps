@@ -200,28 +200,32 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	//////////////////////////////////
 
 	e->layer = e->tile.add_layers();
-	e->layer->set_name("points");
+	e->layer->set_name("polygons");
 	e->layer->set_version(1);
 	e->layer->set_extent(4096);
 
+	e->feature = e->layer->add_features();
+	e->feature->set_type(mapnik::vector::tile::Polygon);
+
+	e->x = 0;
+	e->y = 0;
+
+	e->cmd_idx = -1;
+	e->cmd = -1;
+	e->length = 0;
+
 	for (i = 0; i < e->npoints; i++) {
-		e->feature = e->layer->add_features();
-		e->feature->set_type(mapnik::vector::tile::Point);
+		op(e, MOVE_TO, e->points[i].x - 1, e->points[i].y);
+		op(e, LINE_TO, e->points[i].x, e->points[i].y - 1);
+		op(e, LINE_TO, e->points[i].x + 1, e->points[i].y);
+		op(e, LINE_TO, e->points[i].x, e->points[i].y + 1);
+		op(e, CLOSE_PATH, 0, 0);
+	}
 
-		e->x = 0;
-		e->y = 0;
-
-		e->cmd_idx = -1;
-		e->cmd = -1;
-		e->length = 0;
-
-		op(e, MOVE_TO, e->points[i].x, e->points[i].y);
-
-		if (e->cmd_idx >= 0) {
-			e->feature->set_geometry(e->cmd_idx, 
-				(e->length << CMD_BITS) |
-				(e->cmd & ((1 << CMD_BITS) - 1)));
-		}
+	if (e->cmd_idx >= 0) {
+		e->feature->set_geometry(e->cmd_idx, 
+			(e->length << CMD_BITS) |
+			(e->cmd & ((1 << CMD_BITS) - 1)));
 	}
 
 	//////////////////////////////////
@@ -333,17 +337,17 @@ void drawPixel(double x, double y, double *image, double *cx, double *cy, double
 
 	// Guarding against rounding error
 
-	if (xx < 0) {
-		xx = 0;
+	if (xx < 1) {
+		xx = 1;
 	}
-	if (xx > 4095) {
-		xx = 4095;
+	if (xx > 4094) {
+		xx = 4094;
 	}
-	if (yy < 0) {
-		yy = 0;
+	if (yy < 1) {
+		yy = 1;
 	}
-	if (yy > 4095) {
-		yy = 4095;
+	if (yy > 4094) {
+		yy = 4094;
 	}
 
 	env *e = (env *) image;
