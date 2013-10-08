@@ -1,7 +1,11 @@
 all: encode render enumerate merge
 
-PNG_CFLAGS=
+PNG_CFLAGS=$(shell pkg-config libpng --cflags)
+PNG_LDFLAGS=$(shell pkg-config libpng --libs)
+
+ifeq ($(PNG_LDFLAGS),)
 PNG_LDFLAGS=-lpng
+endif
 
 ENCODE_OBJS = encode.o util.o
 RENDER_OBJS = render.o util.o vector_tile.pb.o vector.o clip.o
