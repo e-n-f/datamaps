@@ -7,9 +7,10 @@
 #include "graphics.h"
 #include "clip.h"
 
-#if PNG_LIBPNG_VER < 10600
-#error libpng >= 1.6 is required
-#endif
+static void fail(png_structp png_ptr, png_const_charp error_msg) {
+	fprintf(stderr, "PNG error %s\n", error_msg);
+	exit(EXIT_FAILURE);
+}
 
 double *graphics_init() {
 	double *image = malloc(256 * 256 * sizeof(double));
@@ -139,16 +140,31 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 		}
 	}
 
-	png_image image;
+	unsigned char *rows[height];
+	for (i = 0 ; i < height; i++) {
+		rows[i] = buf + i * (4 * width);
+	}
 
-	memset(&image, 0, sizeof image);
-	image.version = PNG_IMAGE_VERSION;
-	image.format = PNG_FORMAT_RGBA;
-	image.width = width;
-	image.height = height;
+	png_structp png_ptr;
+	png_infop info_ptr;
 
-	png_image_write_to_stdio(&image, stdout, 0, buf, 4 * width, NULL);
-	png_image_free(&image);
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, fail, fail, fail);
+	if (png_ptr == NULL) {
+		fprintf(stderr, "PNG failure (write struct)\n");
+		exit(EXIT_FAILURE);
+	}
+	info_ptr = png_create_info_struct(png_ptr);
+	if (info_ptr == NULL) {
+		png_destroy_write_struct(&png_ptr, NULL);
+		fprintf(stderr, "PNG failure (info struct)\n");
+		exit(EXIT_FAILURE);
+	}
+
+	png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_set_rows(png_ptr, info_ptr, rows);
+	png_init_io(png_ptr, stdout);
+	png_write_png(png_ptr, info_ptr, 0, NULL);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
 
 	free(buf);
 }
