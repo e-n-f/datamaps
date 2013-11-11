@@ -22,7 +22,7 @@ render: $(RENDER_CORE_OBJS) $(RENDER_PNG_OBJS)
 	$(CC) -g -Wall -O3 -o $@ $^ -lm -lz $(PNG_LDFLAGS)
 
 render-vector: $(RENDER_CORE_OBJS) $(RENDER_VECTOR_OBJS)
-	$(CC) -g -Wall -O3 -o $@ $^ -lm -lprotobuf-lite
+	$(CC) -g -Wall -O3 -o $@ $^ -lm -lz -lprotobuf-lite
 
 enumerate: $(ENUMERATE_OBJS)
 	$(CC) -g -Wall -O3 -o $@ $^ -lm
