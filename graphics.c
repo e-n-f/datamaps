@@ -190,12 +190,12 @@ static void putPixel(double x, double y, double bright, struct graphics *g, doub
 	int x0 = floor(x);
 	int y0 = floor(y);
 
-	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
-		g->image[y0 * 256 + x0] += bright;
+	if (x0 >= 0 && y0 >= 0 && x0 <= g->width - 1 && y0 <= g->height - 1) {
+		g->image[y0 * g->width + x0] += bright;
 
 		if (hue >= 0) {
-			g->cx[y0 * 256 + x0] += bright * cos(hue * 2 * M_PI);
-			g->cy[y0 * 256 + x0] += bright * sin(hue * 2 * M_PI);
+			g->cx[y0 * g->width + x0] += bright * cos(hue * 2 * M_PI);
+			g->cy[y0 * g->width + x0] += bright * sin(hue * 2 * M_PI);
 		}
 	}
 }
@@ -360,8 +360,8 @@ void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright,
 int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, double bright, double hue, int antialias, double thick) {
 	double xmin = -1 - thick;
 	double ymin = -1 - thick;
-	double xmax = 256 + thick;
-	double ymax = 256 + thick;
+	double xmax = g->width + thick;
+	double ymax = g->height + thick;
 
 	int accept = clip(&x0, &y0, &x1, &y1, xmin, ymin, xmax, ymax);
 
