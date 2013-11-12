@@ -28,9 +28,9 @@ int antialias = 1;
 double mercator = -1;
 int multiplier = 1;
 
-void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass);
+void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass);
 
-int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, double *image, double *cx, double *cy, int mapbits, int metabits, int dump, int gps, int colors) {
+int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, int colors) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 	int ret = 0;
 
@@ -152,7 +152,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				should = 1;
 			} else {
 				for (k = 1; k < components; k++) {
-					if (drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], NULL, NULL, NULL, 0, 0, 0, 0)) {
+					if (drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], NULL, 0, 0, 0, 0)) {
 						should = 1;
 						break;
 					}
@@ -186,9 +186,9 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			}
 
 			if (brush <= 1) {
-				drawPixel(xd[0] - .5, yd[0] - .5, image, cx, cy, bright * brush, hue);
+				drawPixel(xd[0] - .5, yd[0] - .5, gc, bright * brush, hue);
 			} else {
-				drawBrush(xd[0], yd[0], image, cx, cy, bright, brush, hue);
+				drawBrush(xd[0], yd[0], gc, bright, brush, hue);
 				ret = 1;
 			}
 		} else {
@@ -217,24 +217,24 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 				if (xk - xk1 >= (1LL << 31)) {
 					wxy2fxy(xk - (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], gc, bright1, hue, antialias, thick);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 					wxy2fxy(xk1 + (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], gc, bright1, hue, antialias, thick);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 				} else if (xk1 - xk >= (1LL << 31)) {
 					wxy2fxy(xk1 - (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], gc, bright1, hue, antialias, thick);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 					wxy2fxy(xk + (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], gc, bright1, hue, antialias, thick);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 				} else {
-					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], image, cx, cy, bright1, hue, antialias, thick);
+					drawClip(xd[k - 1], yd[k - 1], xd[k], yd[k], gc, bright1, hue, antialias, thick);
 				}
 			}
 		}
@@ -423,10 +423,10 @@ int main(int argc, char **argv) {
 		files[i].bytes = (files[i].mapbits + files[i].metabits + 7) / 8;
 	}
 
-	double *image = graphics_init();
-	double cx[256 * 256], cy[256 * 256];
+	struct graphics *gc = graphics_init(256, 256);
 
 	if (assemble) {
+#if 0
 		unsigned x1, y1, x2, y2;
 
 		latlon2tile(atof(argv[optind + 2]), atof(argv[optind + 3]), z_draw, &x1, &y1);
@@ -465,6 +465,7 @@ int main(int argc, char **argv) {
 		for (x = x1; x <= x2; x++) {
 			for (y = y1; y <= y2; y++) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
+				memset(image, 0, 256 * 256 * sizeof(double));
 
 				for (i = 0; i < nfiles; i++) {
 					do_tile(image, cx, cy, z_draw, x, y, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i);
@@ -490,37 +491,33 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "output: %d by %d\n", 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1));
 			out(image2, cx2, cy2, 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1), transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
+#endif
 	} else {
 		unsigned int x_draw = atoi(argv[optind + 2]);
 		unsigned int y_draw = atoi(argv[optind + 3]);
 
 		for (i = 0; i < nfiles; i++) {
-			do_tile(image, cx, cy, z_draw, x_draw, y_draw, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i);
+			do_tile(gc, z_draw, x_draw, y_draw, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i);
 		}
 
 		if (!dump) {
-			out(image, cx, cy, 256, 256, transparency, display_gamma, invert, color, color2, saturate, mask);
+			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	}
 
 	return 0;
 }
 
-void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw,
+void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw,
 		int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass) {
 	int i;
-
-	if (pass == 0) {
-		memset(cx, 0, 256 * 256 * sizeof(double));
-		memset(cy, 0, 256 * 256 * sizeof(double));
-	}
 
 	// Do the single-point case
 
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	int further = process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+	int further = process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors);
 
 	// When overzoomed, also look up the adjacent tile
 	// to keep from drawing partial circles.
@@ -528,16 +525,16 @@ void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigne
 	if (further && !dump) {
 		if (x_draw > 0) {
 			zxy2bufs(z_draw, x_draw - 1, y_draw, startbuf, endbuf, bytes);
-			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors);
 		}
 
 		if (y_draw > 0) {
 			zxy2bufs(z_draw, x_draw, y_draw - 1, startbuf, endbuf, bytes);
-			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors);
 
 			if (x_draw > 0) {
 				zxy2bufs(z_draw, x_draw - 1, y_draw - 1, startbuf, endbuf, bytes);
-				process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+				process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors);
 			}
 		}
 	}
@@ -556,7 +553,7 @@ void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigne
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors);
 		}
 	}
 
@@ -573,7 +570,7 @@ void do_tile(double *image, double *cx, double *cy, unsigned int z_draw, unsigne
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, image, cx, cy, mapbits, metabits, dump, gps, colors);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors);
 		}
 	}
 

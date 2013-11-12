@@ -12,15 +12,32 @@ static void fail(png_structp png_ptr, png_const_charp error_msg) {
 	exit(EXIT_FAILURE);
 }
 
-double *graphics_init() {
-	double *image = malloc(256 * 256 * sizeof(double));
+struct graphics {
+	int width;
+	int height;
+	double *image;
+	double *cx;
+	double *cy;
+};
 
-	memset(image, 0, 256 * 256 * sizeof(double));
-	return image;
+struct graphics *graphics_init(int width, int height) {
+	struct graphics *g = malloc(sizeof(struct graphics));
+
+	g->width = width;
+	g->height = height;
+	g->image = malloc(width * height * sizeof(double));
+	g->cx = malloc(width * height * sizeof(double));
+	g->cy = malloc(width * height * sizeof(double));
+
+	memset(g->image, 0, width * height * sizeof(double));
+	memset(g->cx, 0, width * height * sizeof(double));
+	memset(g->cy, 0, width * height * sizeof(double));
+
+	return g;
 }
 
-void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
-	unsigned char *buf = malloc(width * height * 4);
+void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
+	unsigned char *buf = malloc(gc->width * gc->height * 4);
 
 	int midr, midg, midb;
 
@@ -39,18 +56,18 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	}
 
 	int i;
-	for (i = 0; i < width * height; i++) {
+	for (i = 0; i < gc->width * gc->height; i++) {
 		double sat = 0;
 
-		if (cx[i] == 0 && cy[i] == 0) {
+		if (gc->cx[i] == 0 && gc->cy[i] == 0) {
 			midr = r;
 			midg = g;
 			midb = b;
 		} else {
-			double h = atan2(cy[i], cx[i]) / (2 * M_PI);
+			double h = atan2(gc->cy[i], gc->cx[i]) / (2 * M_PI);
 
-			if (src[i] != 0) {
-				sat = sqrt(cx[i] * cx[i] + cy[i] * cy[i]) / src[i];
+			if (gc->image[i] != 0) {
+				sat = sqrt(gc->cx[i] * gc->cx[i] + gc->cy[i] * gc->cy[i]) / gc->image[i];
 			}
 
 			// http://basecase.org/env/on-rainbows
@@ -83,20 +100,20 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 			b2 = (color2 >>  0) & 0xFF;
 		}
 
-		if (src[i] != 0) {
+		if (gc->image[i] != 0) {
 			if (gamma != 1) {
-				src[i] = exp(log(src[i]) * gamma);
+				gc->image[i] = exp(log(gc->image[i]) * gamma);
 			}
 		}
 
 		if (mask) {
-			src[i] = limit - src[i];
-			if (src[i] < 0) {
-				src[i] = 0;
+			gc->image[i] = limit - gc->image[i];
+			if (gc->image[i] < 0) {
+				gc->image[i] = 0;
 			}
 		}
 
-		if (src[i] == 0) {
+		if (gc->image[i] == 0) {
 			buf[4 * i + 0] = bg;
 			buf[4 * i + 1] = bg;
 			buf[4 * i + 2] = bg;
@@ -104,29 +121,29 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 		} else {
 			if (sat != 0) {
 #define COLOR_CAP .7
-				if (src[i] > limit2 * COLOR_CAP) {
-					src[i] = limit2 * COLOR_CAP;
+				if (gc->image[i] > limit2 * COLOR_CAP) {
+					gc->image[i] = limit2 * COLOR_CAP;
 				}
 			}
 
 			if (!saturate) {
-				if (src[i] > limit2) {
-					src[i] = limit2;
+				if (gc->image[i] > limit2) {
+					gc->image[i] = limit2;
 				}
 
-				src[i] *= limit / limit2;
+				gc->image[i] *= limit / limit2;
 			}
 
-			if (src[i] <= limit) {
-				double along = src[i] / limit;
+			if (gc->image[i] <= limit) {
+				double along = gc->image[i] / limit;
 				double opacity = (255 * along + transparency * (1 - along)) / 255;
 
 				buf[4 * i + 0] = midr * along / opacity + bg * (1 - along / opacity);
 				buf[4 * i + 1] = midg * along / opacity + bg * (1 - along / opacity);
 				buf[4 * i + 2] = midb * along / opacity + bg * (1 - along / opacity);
 				buf[4 * i + 3] = opacity * 255;
-			} else if (src[i] <= limit2) {
-				double along = (src[i] - limit) / (limit2 - limit);
+			} else if (gc->image[i] <= limit2) {
+				double along = (gc->image[i] - limit) / (limit2 - limit);
 				buf[4 * i + 0] = r2 * along + midr * (1 - along);
 				buf[4 * i + 1] = g2 * along + midg * (1 - along);
 				buf[4 * i + 2] = b2 * along + midb * (1 - along);
@@ -140,9 +157,9 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 		}
 	}
 
-	unsigned char *rows[height];
-	for (i = 0 ; i < height; i++) {
-		rows[i] = buf + i * (4 * width);
+	unsigned char *rows[gc->height];
+	for (i = 0 ; i < gc->height; i++) {
+		rows[i] = buf + i * (4 * gc->width);
 	}
 
 	png_structp png_ptr;
@@ -160,7 +177,7 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 		exit(EXIT_FAILURE);
 	}
 
-	png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_set_IHDR(png_ptr, info_ptr, gc->width, gc->height, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 	png_set_rows(png_ptr, info_ptr, rows);
 	png_init_io(png_ptr, stdout);
 	png_write_png(png_ptr, info_ptr, 0, NULL);
@@ -169,16 +186,16 @@ void out(double *src, double *cx, double *cy, int width, int height, int transpa
 	free(buf);
 }
 
-static void putPixel(double x, double y, double bright, double *image, double *cx, double *cy, double hue) {
+static void putPixel(double x, double y, double bright, struct graphics *g, double hue) {
 	int x0 = floor(x);
 	int y0 = floor(y);
 
 	if (x0 >= 0 && y0 >= 0 && x0 <= 255 && y0 <= 255) {
-		image[y0 * 256 + x0] += bright;
+		g->image[y0 * 256 + x0] += bright;
 
 		if (hue >= 0) {
-			cx[y0 * 256 + x0] += bright * cos(hue * 2 * M_PI);
-			cy[y0 * 256 + x0] += bright * sin(hue * 2 * M_PI);
+			g->cx[y0 * 256 + x0] += bright * cos(hue * 2 * M_PI);
+			g->cy[y0 * 256 + x0] += bright * sin(hue * 2 * M_PI);
 		}
 	}
 }
@@ -193,7 +210,7 @@ static double rfpart(double x) {
 
 // loosely based on
 // http://en.wikipedia.org/wiki/Xiaolin_Wu's_line_algorithm
-static void antialiasedLine(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue) {
+static void antialiasedLine(double x0, double y0, double x1, double y1, struct graphics *g, double bright, double hue) {
 	int steep = fabs(y1 - y0) > fabs(x1 - x0);
 
 	if (steep) {
@@ -225,11 +242,11 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 		y0 = (y0 + y1) / 2;
 
 		if (steep) {
-			putPixel(y0,     x0, dx * rfpart(y0) * bright, image, cx, cy, hue);
-			putPixel(y0 + 1, x0, dx *  fpart(y0) * bright, image, cx, cy, hue);
+			putPixel(y0,     x0, dx * rfpart(y0) * bright, g, hue);
+			putPixel(y0 + 1, x0, dx *  fpart(y0) * bright, g, hue);
 		} else {
-			putPixel(x0, y0,     dx * rfpart(y0) * bright, image, cx, cy, hue);
-			putPixel(x0, y0 + 1, dx *  fpart(y0) * bright, image, cx, cy, hue);
+			putPixel(x0, y0,     dx * rfpart(y0) * bright, g, hue);
+			putPixel(x0, y0 + 1, dx *  fpart(y0) * bright, g, hue);
 		}
 
 		return;
@@ -240,11 +257,11 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 		double yy = y0 + .5 * rfpart(x0) * gradient;
 
 		if (steep) {
-			putPixel(yy,     x0, rfpart(x0) * rfpart(yy) * bright, image, cx, cy, hue);
-			putPixel(yy + 1, x0, rfpart(x0) *  fpart(yy) * bright, image, cx, cy, hue);
+			putPixel(yy,     x0, rfpart(x0) * rfpart(yy) * bright, g, hue);
+			putPixel(yy + 1, x0, rfpart(x0) *  fpart(yy) * bright, g, hue);
 		} else {
-			putPixel(x0, yy,     rfpart(x0) * rfpart(yy) * bright, image, cx, cy, hue);
-			putPixel(x0, yy + 1, rfpart(x0) *  fpart(yy) * bright, image, cx, cy, hue);
+			putPixel(x0, yy,     rfpart(x0) * rfpart(yy) * bright, g, hue);
+			putPixel(x0, yy + 1, rfpart(x0) *  fpart(yy) * bright, g, hue);
 		}
 
 		y0 += gradient * rfpart(x0);
@@ -256,11 +273,11 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 		double yy = y1 - .5 * fpart(x1) * gradient;
 
 		if (steep) {
-			putPixel(yy,     x1, fpart(x1) * rfpart(yy) * bright, image, cx, cy, hue);
-			putPixel(yy + 1, x1, fpart(x1) *  fpart(yy) * bright, image, cx, cy, hue);
+			putPixel(yy,     x1, fpart(x1) * rfpart(yy) * bright, g, hue);
+			putPixel(yy + 1, x1, fpart(x1) *  fpart(yy) * bright, g, hue);
 		} else {
-			putPixel(x1, yy,     fpart(x1) * rfpart(yy) * bright, image, cx, cy, hue);
-			putPixel(x1, yy + 1, fpart(x1) *  fpart(yy) * bright, image, cx, cy, hue);
+			putPixel(x1, yy,     fpart(x1) * rfpart(yy) * bright, g, hue);
+			putPixel(x1, yy + 1, fpart(x1) *  fpart(yy) * bright, g, hue);
 		}
 
 		y1 -= gradient * fpart(x1);
@@ -274,24 +291,24 @@ static void antialiasedLine(double x0, double y0, double x1, double y1, double *
 
 	for (; x0 < x1; x0++) {
 		if (steep) {
-			putPixel(y0,     x0, rfpart(y0) * bright, image, cx, cy, hue);
-			putPixel(y0 + 1, x0,  fpart(y0) * bright, image, cx, cy, hue);
+			putPixel(y0,     x0, rfpart(y0) * bright, g, hue);
+			putPixel(y0 + 1, x0,  fpart(y0) * bright, g, hue);
 		} else {
-			putPixel(x0, y0,     rfpart(y0) * bright, image, cx, cy, hue);
-			putPixel(x0, y0 + 1,  fpart(y0) * bright, image, cx, cy, hue);
+			putPixel(x0, y0,     rfpart(y0) * bright, g, hue);
+			putPixel(x0, y0 + 1,  fpart(y0) * bright, g, hue);
 		}
 
 		y0 += gradient;
 	}
 }
 
-static void antialiasedLineThick(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, double thick) {
+static void antialiasedLineThick(double x0, double y0, double x1, double y1, struct graphics *g, double bright, double hue, double thick) {
 	if (thick <= 1) {
-		antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright * thick, hue);
+		antialiasedLine(x0, y0, x1, y1, g, bright * thick, hue);
 		return;
 	}
 
-	antialiasedLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+	antialiasedLine(x0, y0, x1, y1, g, bright, hue);
 	int off = 1;
 	thick--;
 
@@ -301,13 +318,13 @@ static void antialiasedLineThick(double x0, double y0, double x1, double y1, dou
 
 	while (thick > 0) {
 		if (thick >= 2) {
-			antialiasedLine(x0 + c * off, y0 + s * off, x1 + c * off, y1 + s * off, image, cx, cy, bright, hue);
-			antialiasedLine(x0 - c * off, y0 - s * off, x1 - c * off, y1 - s * off, image, cx, cy, bright, hue);
+			antialiasedLine(x0 + c * off, y0 + s * off, x1 + c * off, y1 + s * off, g, bright, hue);
+			antialiasedLine(x0 - c * off, y0 - s * off, x1 - c * off, y1 - s * off, g, bright, hue);
 		} else {
 			antialiasedLine(x0 + c * (off - 1 + thick / 2), y0 + s * (off - 1 + thick / 2),
-					x1 + c * (off - 1 + thick / 2), y1 + s * (off - 1 + thick / 2), image, cx, cy, bright * thick / 2, hue);
+					x1 + c * (off - 1 + thick / 2), y1 + s * (off - 1 + thick / 2), g, bright * thick / 2, hue);
 			antialiasedLine(x0 - c * (off - 1 + thick / 2), y0 - s * (off - 1 + thick / 2),
-					x1 - c * (off - 1 + thick / 2), y1 - s * (off - 1 + thick / 2), image, cx, cy, bright * thick / 2, hue);
+					x1 - c * (off - 1 + thick / 2), y1 - s * (off - 1 + thick / 2), g, bright * thick / 2, hue);
 		}
 
 		thick -= 2;
@@ -316,7 +333,7 @@ static void antialiasedLineThick(double x0, double y0, double x1, double y1, dou
 }
 
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
-void drawLine(int x0, int y0, int x1, int y1, double *image, double *cx, double *cy, double bright, double hue) {
+void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright, double hue) {
 	int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
 	int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
 	int err = ((dx > dy) ? dx : -dy) / 2, e2;
@@ -326,7 +343,7 @@ void drawLine(int x0, int y0, int x1, int y1, double *image, double *cx, double 
 			break;
 		}
 
-		putPixel(x0, y0, bright, image, cx, cy, hue);
+		putPixel(x0, y0, bright, g, hue);
 
 		e2 = err;
 		if (e2 > -dx) { 
@@ -340,7 +357,7 @@ void drawLine(int x0, int y0, int x1, int y1, double *image, double *cx, double 
 	}
 }
 
-int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias, double thick) {
+int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, double bright, double hue, int antialias, double thick) {
 	double xmin = -1 - thick;
 	double ymin = -1 - thick;
 	double xmax = 256 + thick;
@@ -349,11 +366,11 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 	int accept = clip(&x0, &y0, &x1, &y1, xmin, ymin, xmax, ymax);
 
 	if (accept) {
-		if (image != NULL) {
+		if (g != NULL) {
 			if (antialias) {
-				antialiasedLineThick(x0, y0, x1, y1, image, cx, cy, bright, hue, thick);
+				antialiasedLineThick(x0, y0, x1, y1, g, bright, hue, thick);
 			} else {
-				drawLine(x0, y0, x1, y1, image, cx, cy, bright, hue);
+				drawLine(x0, y0, x1, y1, g, bright, hue);
 			}
 		}
 
@@ -363,18 +380,18 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 	return 0;
 }
 
-void drawPixel(double x, double y, double *image, double *cx, double *cy, double bright, double hue) {
-	putPixel(x,     y,     bright * rfpart(x) * rfpart(y), image, cx, cy, hue);
-	putPixel(x + 1, y,     bright *  fpart(x) * rfpart(y), image, cx, cy, hue);
-	putPixel(x,     y + 1, bright * rfpart(x) *  fpart(y), image, cx, cy, hue);
-	putPixel(x + 1, y + 1, bright *  fpart(x) *  fpart(y), image, cx, cy, hue);
+void drawPixel(double x, double y, struct graphics *g, double bright, double hue) {
+	putPixel(x,     y,     bright * rfpart(x) * rfpart(y), g, hue);
+	putPixel(x + 1, y,     bright *  fpart(x) * rfpart(y), g, hue);
+	putPixel(x,     y + 1, bright * rfpart(x) *  fpart(y), g, hue);
+	putPixel(x + 1, y + 1, bright *  fpart(x) *  fpart(y), g, hue);
 }
 
 static double thebrush = -1;
 static int brushwidth = -1;
 static unsigned char *brushbytes = NULL;
 
-void drawBrush(double x, double y, double *image, double *cx, double *cy, double bright, double brush, double hue) {
+void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue) {
 	if (brush != thebrush) {
 		free(brushbytes);
 		thebrush = brush;
@@ -442,7 +459,7 @@ void drawBrush(double x, double y, double *image, double *cx, double *cy, double
 	int xx, yy;
 	for (xx = 0; xx < width; xx++) {
 		for (yy = 0; yy < width; yy++) {
-			drawPixel(x + xx, y + yy, image, cx, cy, brushbytes[yy * width + xx] * bright / (MULT * MULT), hue);
+			drawPixel(x + xx, y + yy, g, brushbytes[yy * width + xx] * bright / (MULT * MULT), hue);
 		}
 	}
 }
