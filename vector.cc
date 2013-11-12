@@ -80,7 +80,13 @@ public:
 #define CLOSE_PATH 7
 #define CMD_BITS 3
 
-double *graphics_init() {
+struct graphics {
+	int width;
+	int height;
+	env *e;
+};
+
+struct graphics *graphics_init(int width, int height) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	env *e = new env;
@@ -93,7 +99,12 @@ double *graphics_init() {
 	e->npoints = 0;
 	e->points = (struct point *) malloc(e->npalloc * sizeof(struct point));
 
-	return (double *) e;
+	struct graphics *g = (struct graphics *) malloc(sizeof(struct graphics));
+	g->e = e;
+	g->width = width;
+	g->height = height;
+
+	return g;
 }
 
 // from mapnik-vector-tile/src/vector_tile_compression.hpp
@@ -127,8 +138,8 @@ static inline int compress(std::string const& input, std::string & output)
 
 static void op(env *e, int cmd, int x, int y);
 
-void out(double *src, double *cx, double *cy, int width, int height, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
-	env *e = (env *) src;
+void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
+	env *e = gc->e;
 
 #ifdef CHAIN
 	qsort(e->lines, e->nlines, sizeof(struct line), linecmp);
@@ -274,7 +285,7 @@ static void op(env *e, int cmd, int x, int y) {
 	}
 }
 
-int drawClip(double x0, double y0, double x1, double y1, double *image, double *cx, double *cy, double bright, double hue, int antialias, double thick) {
+int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, int antialias, double thick) {
 	int accept = clip(&x0, &y0, &x1, &y1, 0, 0, XMAX / 16.0, YMAX / 16.0);
 
 	if (accept) {
@@ -311,7 +322,7 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 			yy1 = 4095;
 		}
 
-		env *e = (env *) image;
+		env *e = gc->e;
 
 		if (xx0 != xx1 || yy0 != yy1) {
 			if (e->nlines + 1 >= e->nlalloc) {
@@ -331,7 +342,7 @@ int drawClip(double x0, double y0, double x1, double y1, double *image, double *
 	return 0;
 }
 
-void drawPixel(double x, double y, double *image, double *cx, double *cy, double bright, double hue) {
+void drawPixel(double x, double y, struct graphics *gc, double bright, double hue) {
 	int xx = x * 16;
 	int yy = y * 16;
 
@@ -350,7 +361,7 @@ void drawPixel(double x, double y, double *image, double *cx, double *cy, double
 		yy = 4094;
 	}
 
-	env *e = (env *) image;
+	env *e = gc->e;
 
 	if (e->npoints + 1 >= e->npalloc) {
 		e->npalloc *= 2;
@@ -363,6 +374,6 @@ void drawPixel(double x, double y, double *image, double *cx, double *cy, double
 	e->npoints++;
 }
 
-void drawBrush(double x, double y, double *image, double *cx, double *cy, double bright, double brush, double hue) {
-	drawPixel(x, y, image, cx, cy, bright, hue);
+void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue) {
+	drawPixel(x, y, gc, bright, hue);
 }
