@@ -9,6 +9,7 @@
 #include <math.h>
 #include "util.h"
 #include "graphics.h"
+#include "clip.h"
 
 int dot_base = 13;
 double dot_bright = 0.05917;
@@ -152,7 +153,12 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				should = 1;
 			} else {
 				for (k = 1; k < components; k++) {
-					if (drawClip(xd[k - 1] + xoff, yd[k - 1] + yoff, xd[k] + xoff, yd[k] + yoff, NULL, 0, 0, 0, 0)) {
+					double x1 = xd[k - 1];
+					double y1 = yd[k - 1];
+					double x2 = xd[k];
+					double y2 = yd[k];
+
+					if (clip(&x1, &y1, &x2, &y2, 0, 0, 256, 256)) {
 						should = 1;
 						break;
 					}
