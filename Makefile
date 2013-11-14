@@ -14,6 +14,7 @@ MERGE_OBJS = merge.o util.o
 
 RENDER_VECTOR_OBJS = vector_tile.pb.o vector.o
 RENDER_PNG_OBJS = graphics.o
+RENDER_RASTER_OBJS = raster.o
 
 encode: $(ENCODE_OBJS)
 	$(CC) -g -Wall -O3 -o $@ $^ -lm
@@ -23,6 +24,9 @@ render: $(RENDER_CORE_OBJS) $(RENDER_PNG_OBJS)
 
 render-vector: $(RENDER_CORE_OBJS) $(RENDER_VECTOR_OBJS)
 	$(CC) -g -Wall -O3 -o $@ $^ -lm -lz -lprotobuf-lite
+
+render-raster: $(RENDER_CORE_OBJS) $(RENDER_RASTER_OBJS)
+	$(CC) -g -Wall -O3 -o $@ $^ -lm
 
 enumerate: $(ENUMERATE_OBJS)
 	$(CC) -g -Wall -O3 -o $@ $^ -lm
