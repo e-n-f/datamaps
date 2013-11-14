@@ -285,7 +285,7 @@ static void op(env *e, int cmd, int x, int y) {
 	}
 }
 
-int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, int antialias, double thick) {
+int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, int antialias, double thick, struct tilecontext *tc) {
 	int accept = clip(&x0, &y0, &x1, &y1, 0, 0, XMAX / 16.0, YMAX / 16.0);
 
 	if (accept) {
@@ -342,7 +342,7 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, do
 	return 0;
 }
 
-void drawPixel(double x, double y, struct graphics *gc, double bright, double hue) {
+void drawPixel(double x, double y, struct graphics *gc, double bright, double hue, struct tilecontext *tc) {
 	int xx = x * 16;
 	int yy = y * 16;
 
@@ -374,6 +374,6 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 	e->npoints++;
 }
 
-void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue) {
-	drawPixel(x, y, gc, bright, hue);
+void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, struct tilecontext *tc) {
+	drawPixel(x, y, gc, bright, hue, tc);
 }
