@@ -108,7 +108,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		step = 1;
 	} else {
 		// Align to step size so each zoom is a superset of the previous
-		start = (start - map) / (step * bytes) * (step * bytes) + map;
+		start = (start - map + (step * bytes - 1)) / (step * bytes) * (step * bytes) + map;
 	}
 
 	for (; start < end; start += step * bytes) {
