@@ -73,7 +73,7 @@ The <code>enumerate</code> and <code>render</code> programs work together
 to generate a tileset for whatever area there is data for. If you do,
 for example,
 
-  $ enumerate -z14 dirname | xargs -L1 -P8 ./tools/make-tile
+    $ enumerate -z14 dirname | xargs -L1 -P8 ./tools/make-tile
 
 <code>enumerate</code> will output a list of all the zoom/x/y
 combinations that appear in <code>dirname</code> through zoom 18,
