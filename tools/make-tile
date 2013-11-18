@@ -1,5 +1,6 @@
 #!/bin/sh
 
-mkdir -p tiles/$1/$2/$3
-echo "$1 $2 $3 $4"
-./render -t 0 -c FF8800 $1 $2 $3 $4 > tiles/$1/$2/$3/$4.png
+dir=$(basename $1)
+mkdir -p tiles/$dir/$2/$3
+echo "$* -> tiles/$dir/$2/$3"
+./render -t 0 -c FF8800 $1 $2 $3 $4 > tiles/$dir/$2/$3/$4.png
