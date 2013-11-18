@@ -83,3 +83,33 @@ of these to generate the tiles into <code>tiles/dirname</code>.
 The <code>-P8</code> makes xargs invoke 8 instances of <code>make-tile</code>
 at a time. If you have a different number of CPU cores, a different number
 may work out better.
+
+Adding color to data
+--------------------
+
+The syntax for color is kind of silly, but it works, so I had better document it.
+
+Colors are denoted by distance around the color wheel. The brightness and saturation
+are part of the density rendering; the color only controls the hue.
+
+If you want to have 256 possible hues, that takes 8 bits to encode, so you need to say
+
+    encode -m8
+
+to give space in each record for 8 bits of metadata. Each input record, in addition
+to the location, also then needs to specify what color it should be, and the format
+for that looks like
+
+    40.711017,-74.011017 8:0
+    40.710933,-74.011250 8:85
+    40.710867,-74.011400 8:170
+
+to make the first one red, the second one green, and the third one blue. And then
+when rendering, you do
+
+    render -C256
+
+to say that it should use the metadata as 256ths of the color wheel.
+
+Yes, it is silly to have to specify the size of the metadata in three different places
+in two different formats.
