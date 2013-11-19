@@ -24,7 +24,7 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 }
 
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
-void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright, double hue, struct tilecontext *tc) {
+void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright, double hue, double thick, struct tilecontext *tc) {
 	int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
 	int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
 	int err = ((dx > dy) ? dx : -dy) / 2, e2;
@@ -35,6 +35,17 @@ void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright,
 		}
 
 		drawPixel(x0, y0, g, bright, hue, tc);
+
+		int n;
+		for (n = 1; n < ceil(thick / 2); n++) {
+			if (dx > dy) {
+				drawPixel(x0, y0 - n, g, bright, hue, tc);
+				drawPixel(x0, y0 + n, g, bright, hue, tc);
+			} else {
+				drawPixel(x0 - n, y0, g, bright, hue, tc);
+				drawPixel(x0 + n, y0, g, bright, hue, tc);
+			}
+		}
 
 		e2 = err;
 		if (e2 > -dx) { 
@@ -58,7 +69,7 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, dou
 
 	if (accept) {
 		if (g != NULL) {
-			drawLine(x0, y0, x1, y1, g, bright, hue, tc);
+			drawLine(x0, y0, x1, y1, g, bright, hue, thick, tc);
 		}
 
 		return 1;
