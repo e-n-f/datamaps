@@ -148,7 +148,7 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->layer = e->tile.add_layers();
 	e->layer->set_name("lines");
 	e->layer->set_version(1);
-	e->layer->set_extent(4096);
+	e->layer->set_extent(XMAX);
 
 	e->feature = e->layer->add_features();
 	e->feature->set_type(mapnik::vector::tile::LineString);
@@ -213,7 +213,7 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->layer = e->tile.add_layers();
 	e->layer->set_name("polygons");
 	e->layer->set_version(1);
-	e->layer->set_extent(4096);
+	e->layer->set_extent(XMAX);
 
 	e->feature = e->layer->add_features();
 	e->feature->set_type(mapnik::vector::tile::Polygon);
@@ -286,40 +286,41 @@ static void op(env *e, int cmd, int x, int y) {
 }
 
 int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, int antialias, double thick, struct tilecontext *tc) {
-	int accept = clip(&x0, &y0, &x1, &y1, 0, 0, XMAX / 16.0, YMAX / 16.0);
+	double mult = XMAX / gc->width;
+	int accept = clip(&x0, &y0, &x1, &y1, 0, 0, XMAX / mult, YMAX / mult);
 
 	if (accept) {
-		int xx0 = x0 * 16;
-		int yy0 = y0 * 16;
-		int xx1 = x1 * 16;
-		int yy1 = y1 * 16;
+		int xx0 = x0 * mult;
+		int yy0 = y0 * mult;
+		int xx1 = x1 * mult;
+		int yy1 = y1 * mult;
 
 		// Guarding against rounding error
 
 		if (xx0 < 0) {
 			xx0 = 0;
 		}
-		if (xx0 > 4095) {
-			xx0 = 4095;
+		if (xx0 > XMAX - 1) {
+			xx0 = XMAX - 1;
 		}
 		if (yy0 < 0) {
 			yy0 = 0;
 		}
-		if (yy0 > 4095) {
-			yy0 = 4095;
+		if (yy0 > YMAX - 1) {
+			yy0 = YMAX - 1;
 		}
 
 		if (xx1 < 0) {
 			xx1 = 0;
 		}
-		if (xx1 > 4095) {
-			xx1 = 4095;
+		if (xx1 > XMAX - 1) {
+			xx1 = XMAX - 1;
 		}
 		if (yy1 < 0) {
 			yy1 = 0;
 		}
-		if (yy1 > 4095) {
-			yy1 = 4095;
+		if (yy1 > YMAX - 1) {
+			yy1 = YMAX - 1;
 		}
 
 		env *e = gc->e;
@@ -343,22 +344,23 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, do
 }
 
 void drawPixel(double x, double y, struct graphics *gc, double bright, double hue, struct tilecontext *tc) {
-	int xx = x * 16;
-	int yy = y * 16;
+	double mult = XMAX / gc->width;
+	int xx = x * mult;
+	int yy = y * mult;
 
 	// Guarding against rounding error
 
 	if (xx < 1) {
 		xx = 1;
 	}
-	if (xx > 4094) {
-		xx = 4094;
+	if (xx > XMAX - 2) {
+		xx = XMAX - 2;
 	}
 	if (yy < 1) {
 		yy = 1;
 	}
-	if (yy > 4094) {
-		yy = 4094;
+	if (yy > YMAX - 2) {
+		yy = YMAX - 2;
 	}
 
 	env *e = gc->e;

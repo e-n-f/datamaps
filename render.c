@@ -29,6 +29,8 @@ int antialias = 1;
 double mercator = -1;
 int multiplier = 1;
 
+int tilesize = 256;
+
 void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff);
 
 int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, int colors, int xoff, int yoff) {
@@ -165,7 +167,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 					double x2 = xd[k];
 					double y2 = yd[k];
 
-					if (clip(&x1, &y1, &x2, &y2, 0, 0, 256, 256)) {
+					if (clip(&x1, &y1, &x2, &y2, 0, 0, 1, 1)) {
 						should = 1;
 						break;
 					}
@@ -194,14 +196,16 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			}
 		} else if (components == 1) {
 			if (!antialias) {
-				xd[0] = (int) xd[0] + .5;
-				yd[0] = (int) yd[0] + .5;
+				xd[0] = ((int) (xd[0] * tilesize) + .5) / tilesize;
+				yd[0] = ((int) (yd[0] * tilesize) + .5) / tilesize;
 			}
 
-			if (brush <= 1) {
-				drawPixel(xd[0] - .5 + xoff, yd[0] - .5 + yoff, gc, bright * brush, hue, &tc);
+			double b = brush * tilesize / 256.0;
+
+			if (b <= 1) {
+				drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, &tc);
 			} else {
-				drawBrush(xd[0] + xoff, yd[0] + yoff, gc, bright, brush, hue, &tc);
+				drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, &tc);
 				ret = 1;
 			}
 		} else {
@@ -228,26 +232,28 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 					}
 				}
 
+				double thick1 = thick * tilesize / 256.0;
+
 				if (xk - xk1 >= (1LL << 31)) {
 					wxy2fxy(xk - (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1] + xoff, yd[k - 1] + yoff, xd[k] + xoff, yd[k] + yoff, gc, bright1, hue, antialias, thick, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 					wxy2fxy(xk1 + (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1] + xoff, yd[k - 1] + yoff, xd[k] + xoff, yd[k] + yoff, gc, bright1, hue, antialias, thick, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 				} else if (xk1 - xk >= (1LL << 31)) {
 					wxy2fxy(xk1 - (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1] + xoff, yd[k - 1] + yoff, xd[k] + xoff, yd[k] + yoff, gc, bright1, hue, antialias, thick, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 					wxy2fxy(xk + (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1] + xoff, yd[k - 1] + yoff, xd[k] + xoff, yd[k] + yoff, gc, bright1, hue, antialias, thick, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 				} else {
-					drawClip(xd[k - 1] + xoff, yd[k - 1] + yoff, xd[k] + xoff, yd[k] + yoff, gc, bright1, hue, antialias, thick, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
 				}
 			}
 		}
@@ -301,7 +307,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:smf:S:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:smf:S:T:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -395,6 +401,10 @@ int main(int argc, char **argv) {
 			files[nfiles++].name = optarg;
 			break;
 
+		case 'T':
+			tilesize = atoi(optarg);
+			break;
+
 		default:
 			usage(argv);
 		}
@@ -456,18 +466,18 @@ int main(int argc, char **argv) {
 		}
 
 		fprintf(stderr, "making zoom %u: %u/%u to %u/%u\n", z_draw, x1, y1, x2, y2);
-		fprintf(stderr, "that's %d by %d\n", 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1));
+		fprintf(stderr, "that's %d by %d\n", tilesize * (x2 - x1 + 1), tilesize * (y2 - y1 + 1));
 
-		int stride = (x2 - x1 + 1) * 256;
+		int stride = (x2 - x1 + 1) * tilesize;
 		struct graphics *gc = NULL;
 
 		if (!dump) {
-			if (stride * (y2 - y1 + 1) * 256 > 10000 * 10000) {
+			if (stride * (y2 - y1 + 1) * tilesize > 10000 * 10000) {
 				fprintf(stderr, "Image too big\n");
 				exit(EXIT_FAILURE);
 			}
 
-			gc = graphics_init((x2 - x1 + 1) * 256, (y2 - y1 + 1) * 256);
+			gc = graphics_init((x2 - x1 + 1) * tilesize, (y2 - y1 + 1) * tilesize);
 		}
 
 		unsigned int x, y;
@@ -476,17 +486,17 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
 
 				for (i = 0; i < nfiles; i++) {
-					do_tile(gc, z_draw, x, y, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1) * 256, (y - y1) * 256);
+					do_tile(gc, z_draw, x, y, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1) * tilesize, (y - y1) * tilesize);
 				}
 			}
 		}
 
 		if (!dump) {
-			fprintf(stderr, "output: %d by %d\n", 256 * (x2 - x1 + 1), 256 * (y2 - y1 + 1));
+			fprintf(stderr, "output: %d by %d\n", tilesize * (x2 - x1 + 1), tilesize * (y2 - y1 + 1));
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	} else {
-		struct graphics *gc = graphics_init(256, 256);
+		struct graphics *gc = graphics_init(tilesize, tilesize);
 
 		unsigned int x_draw = atoi(argv[optind + 2]);
 		unsigned int y_draw = atoi(argv[optind + 3]);

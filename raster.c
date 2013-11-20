@@ -86,8 +86,8 @@ void drawPixel(double x, double y, struct graphics *g, double bright, double hue
 	long long bx = tc->x * scale;
 	long long by = tc->y * scale;
 
-	bx += x / 256 * scale;
-	by += y / 256 * scale;
+	bx += x / g->width * scale;
+	by += y / g->height * scale;
 
 	double lat, lon;
 	tile2latlon(bx, by, 32, &lat, &lon);

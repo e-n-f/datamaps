@@ -47,17 +47,17 @@ void tile2latlon(unsigned int x, unsigned int y, int zoom, double *lat, double *
 	*lat = lat_rad * 180 / M_PI;
 }
 
-// Convert world coordinates to floating pixels within a particular tile
+// Convert world coordinates to floating fraction of a particular tile
 void wxy2fxy(long long wx, long long wy, double *ox, double *oy, int z, int x, int y) {
-	// then offset origin
+	// offset origin
 
 	wx -= (long long) x << (32 - z);
 	wy -= (long long) y << (32 - z);
 
 	// then scale
 
-	*ox = (double) wx / (1 << (32 - z - 8));
-	*oy = (double) wy / (1 << (32 - z - 8));
+	*ox = (double) wx / (1LL << (32 - z));
+	*oy = (double) wy / (1LL << (32 - z));
 }
 
 // Convert world coordinates to a bit stream
