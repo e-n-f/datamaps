@@ -73,14 +73,14 @@ The <code>enumerate</code> and <code>render</code> programs work together
 to generate a tileset for whatever area there is data for. If you do,
 for example,
 
-    $ enumerate -z14 dirname | xargs -L1 -P8 ./tools/make-tile
+    $ enumerate -z14 dirname | xargs -L1 -P8 ./render -o tiles/dirname
 
 <code>enumerate</code> will output a list of all the zoom/x/y
 combinations that appear in <code>dirname</code> through zoom 18,
-and <code>make-tile</code> will invoke <code>render</code> on each
+and <code>xargs</code> will invoke <code>render</code> on each
 of these to generate the tiles into <code>tiles/dirname</code>.
 
-The <code>-P8</code> makes xargs invoke 8 instances of <code>make-tile</code>
+The <code>-P8</code> makes xargs invoke 8 instances of <code>render</code>
 at a time. If you have a different number of CPU cores, a different number
 may work out better.
 

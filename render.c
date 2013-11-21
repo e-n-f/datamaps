@@ -274,6 +274,29 @@ void *fmalloc(size_t size) {
 	return p;
 }
 
+void prep(char *outdir, int z, int x, int y) {
+	if (outdir == NULL) {
+		return;
+	}
+
+	char path[strlen(outdir) + 12 + 12 + 12 + 5];
+
+	sprintf(path, "%s", outdir);
+	mkdir(path, 0777);
+
+	sprintf(path, "%s/%d", outdir, z);
+	mkdir(path, 0777);
+
+	sprintf(path, "%s/%d/%d", outdir, z, x);
+	mkdir(path, 0777);
+
+	sprintf(path, "%s/%d/%d/%d.png", outdir, z, x, y);
+	if (freopen(path, "wb", stdout) == NULL) {
+		perror(path);
+		exit(EXIT_FAILURE);
+	}
+}
+
 void usage(char **argv) {
 	fprintf(stderr, "Usage: %s [-t transparency] [-dga] [-C colors] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] [-l lineramp] file z x y\n", argv[0]);
 	fprintf(stderr, "Usage: %s -A [-t transparency] [-dga] [-C colors] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] [-l lineramp] file z minlat minlon maxlat maxlon\n", argv[0]);
@@ -295,6 +318,7 @@ int main(int argc, char **argv) {
 	int color2 = -1;
 	int saturate = 1;
 	int mask = 0;
+	char *outdir = NULL;
 
 	struct file {
 		char *name;
@@ -307,7 +331,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:smf:S:T:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -405,6 +429,10 @@ int main(int argc, char **argv) {
 			tilesize = atoi(optarg);
 			break;
 
+		case 'o':
+			outdir = optarg;
+			break;
+
 		default:
 			usage(argv);
 		}
@@ -493,6 +521,7 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", tilesize * (x2 - x1 + 1), tilesize * (y2 - y1 + 1));
+			prep(outdir, z_draw, x1, y1);
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	} else {
@@ -506,6 +535,7 @@ int main(int argc, char **argv) {
 		}
 
 		if (!dump) {
+			prep(outdir, z_draw, x_draw, y_draw);
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	}
