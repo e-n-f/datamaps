@@ -39,7 +39,7 @@ struct tile {
 	int sibling[2][2];
 };
 
-void handle(long long xx, long long yy, struct tile *tile, char *fname, int minzoom, int maxzoom, int showdist, unsigned int *x, unsigned int *y, struct file **files, int sibling) {
+void handle(long long xx, long long yy, struct tile *tile, char *fname, int minzoom, int maxzoom, int showdist, unsigned int *x, unsigned int *y, struct file **files, int sibling, int verbose) {
 	double lat, lon;
 	int z;
 
@@ -50,13 +50,17 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 				tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
 					    32, &lat, &lon);
 
-				printf("%s %d %d %d %lld %lf,%lf",
+				printf("%s %d %d %d",
 					fname,
 					z,
 					tile[z].xtile,
-					tile[z].ytile,
+					tile[z].ytile);
+
+				if (verbose) {
+					printf(" %lld %lf,%lf",
 					tile[z].count,
 					lat, lon);
+				}
 
 				if (showdist) {
 					printf(" %f", tile[z].len);
@@ -80,11 +84,15 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 									    tile[z].ytile / 2 * 2 + qy,
 									    z, &lat, &lon);
 
-								printf("%s %d %d %d 0 %lf,%lf",
+								printf("%s %d %d %d",
 									fname, z,
 									tile[z].xtile / 2 * 2 + qx,
-									tile[z].ytile / 2 * 2 + qy,
-								        lat, lon);
+									tile[z].ytile / 2 * 2 + qy);
+
+								if (verbose) {
+									printf(" 0 %lf,%lf",
+										lat, lon);
+								}
 
 								if (showdist) {
 									printf(" %f", 0.0);
@@ -141,8 +149,9 @@ int main(int argc, char **argv) {
 	int showdist = 0;
 	int sibling = 0;
 	int all = 0;
+	int verbose = 0;
 
-	while ((i = getopt(argc, argv, "z:Z:ads")) != -1) {
+	while ((i = getopt(argc, argv, "z:Z:adsv")) != -1) {
 		switch (i) {
 		case 'z':
 			maxzoom = atoi(optarg);
@@ -162,6 +171,10 @@ int main(int argc, char **argv) {
 
 		case 'a':
 			all = 1;
+			break;
+
+		case 'v':
+			verbose = 1;
 			break;
 
 		default:
@@ -295,7 +308,7 @@ int main(int argc, char **argv) {
 		} else {
 			long long xx = x[0], yy = y[0];
 
-			handle(xx, yy, tile, fname, minzoom, maxzoom, showdist, x, y, files, sibling);
+			handle(xx, yy, tile, fname, minzoom, maxzoom, showdist, x, y, files, sibling, verbose);
 		}
 
 		if (fread(files[0]->buf, files[0]->bytes, 1, files[0]->f) != 1) {
@@ -304,7 +317,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (!all) {
-		handle(-1, -1, tile, fname, minzoom, maxzoom, showdist, NULL, NULL, files, sibling);
+		handle(-1, -1, tile, fname, minzoom, maxzoom, showdist, NULL, NULL, files, sibling, verbose);
 	}
 
 	return 0;
