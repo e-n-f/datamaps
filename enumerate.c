@@ -18,7 +18,7 @@ struct file {
 };
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-ad] [-z max] [-Z min] file\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-ad] [-z max] [-Z min] [-b minlat,minlon,maxlat,maxlon] file\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -39,7 +39,14 @@ struct tile {
 	int sibling[2][2];
 };
 
-void handle(long long xx, long long yy, struct tile *tile, char *fname, int minzoom, int maxzoom, int showdist, unsigned int *x, unsigned int *y, struct file **files, int sibling) {
+struct bounds {
+	double minlat;
+	double minlon;
+	double maxlat;
+	double maxlon;
+};
+
+void handle(long long xx, long long yy, struct tile *tile, char *fname, int minzoom, int maxzoom, int showdist, unsigned int *x, unsigned int *y, struct file **files, int sibling, struct bounds *bounds) {
 	double lat, lon;
 	int z;
 
@@ -106,27 +113,32 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 			tile[z].xsum = tile[z].ysum = 0;
 		}
 
-		tile[z].count++;
-		tile[z].xsum += xx;
-		tile[z].ysum += yy;
+		tile2latlon(xx, yy, 32, &lat, &lon);
+		if (lat >= bounds->minlat && lat <= bounds->maxlat &&
+		    lon >= bounds->minlon && lon <= bounds->maxlon) {
 
-		if (showdist && x != NULL) {
-			int i;
-			double dist = 0;
-			double max = 1LL << (32 - z);
+			tile[z].count++;
+			tile[z].xsum += xx;
+			tile[z].ysum += yy;
 
-			for (i = 0; i + 1 < files[0]->components; i++) {
-				double d1 = (long long) x[i] - x[i + 1];
-				double d2 = (long long) y[i] - y[i + 1];
-				double d = sqrt(d1 * d1 + d2 * d2);
+			if (showdist && x != NULL) {
+				int i;
+				double dist = 0;
+				double max = 1LL << (32 - z);
+
+				for (i = 0; i + 1 < files[0]->components; i++) {
+					double d1 = (long long) x[i] - x[i + 1];
+					double d2 = (long long) y[i] - y[i + 1];
+					double d = sqrt(d1 * d1 + d2 * d2);
 
 #define MAX 6400  /* ~200 feet */
-				if (d < MAX) {
-					dist += sqrt(d1 * d1 + d2 * d2) / max;
+					if (d < MAX) {
+						dist += sqrt(d1 * d1 + d2 * d2) / max;
+					}
 				}
-			}
 
-			tile[z].len += dist;
+				tile[z].len += dist;
+			}
 		}
 	}
 }
@@ -142,7 +154,13 @@ int main(int argc, char **argv) {
 	int sibling = 0;
 	int all = 0;
 
-	while ((i = getopt(argc, argv, "z:Z:ads")) != -1) {
+	struct bounds bounds;
+	bounds.minlat = -90;
+	bounds.minlon = -180;
+	bounds.maxlat = 90;
+	bounds.maxlon = 180;
+
+	while ((i = getopt(argc, argv, "z:Z:adsb:")) != -1) {
 		switch (i) {
 		case 'z':
 			maxzoom = atoi(optarg);
@@ -163,6 +181,12 @@ int main(int argc, char **argv) {
 		case 'a':
 			all = 1;
 			break;
+
+		case 'b':
+			if (sscanf(optarg, "%lf,%lf,%lf,%lf", &bounds.minlat, &bounds.minlon,
+					&bounds.maxlat, &bounds.maxlon) != 4) {
+				usage(argv);
+			}
 
 		default:
 			usage(argv);
@@ -295,7 +319,7 @@ int main(int argc, char **argv) {
 		} else {
 			long long xx = x[0], yy = y[0];
 
-			handle(xx, yy, tile, fname, minzoom, maxzoom, showdist, x, y, files, sibling);
+			handle(xx, yy, tile, fname, minzoom, maxzoom, showdist, x, y, files, sibling, &bounds);
 		}
 
 		if (fread(files[0]->buf, files[0]->bytes, 1, files[0]->f) != 1) {
@@ -304,7 +328,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (!all) {
-		handle(-1, -1, tile, fname, minzoom, maxzoom, showdist, NULL, NULL, files, sibling);
+		handle(-1, -1, tile, fname, minzoom, maxzoom, showdist, NULL, NULL, files, sibling, &bounds);
 	}
 
 	return 0;
