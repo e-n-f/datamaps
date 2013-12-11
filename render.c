@@ -10,6 +10,7 @@
 #include "util.h"
 #include "graphics.h"
 #include "clip.h"
+#include "dump.h"
 
 int dot_base = 13;
 double dot_bright = 0.05917;
@@ -175,24 +176,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			}
 
 			if (should) {
-				for (k = 0; k < components; k++) {
-					double lat, lon;
-					tile2latlon(x[k], y[k], 32, &lat, &lon);
-
-					printf("%lf,%lf ", lat, lon);
-				}
-
-				if (metabits != 0) {
-					printf("%d:%d ", metabits, meta);
-				}
-
-				printf("// ");
-
-				for (k = 0; k < components; k++) {
-					printf("%08x %08x ", x[k], y[k]);
-				}
-
-				printf("\n");
+				dump_out(dump, x, y, components, metabits, meta);
 			}
 		} else if (components == 1) {
 			if (!antialias) {
@@ -331,7 +315,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -347,6 +331,10 @@ int main(int argc, char **argv) {
 
 		case 'd':
 			dump = 1;
+			break;
+
+		case 'D':
+			dump = 2;
 			break;
 
 		case 'g':
@@ -474,6 +462,9 @@ int main(int argc, char **argv) {
 		files[i].bytes = (files[i].mapbits + files[i].metabits + 7) / 8;
 	}
 
+	if (dump) {
+		dump_begin(dump);
+	}
 
 	if (assemble) {
 		unsigned x1, y1, x2, y2;
@@ -538,6 +529,10 @@ int main(int argc, char **argv) {
 			prep(outdir, z_draw, x_draw, y_draw);
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
+	}
+
+	if (dump) {
+		dump_end(dump);
 	}
 
 	return 0;
