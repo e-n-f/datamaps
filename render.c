@@ -117,7 +117,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		unsigned int x[components], y[components];
 		double xd[components], yd[components];
 		int k;
-		unsigned int meta = 0;
+		unsigned long long meta = 0;
 
 		buf2xys(start, mapbits, metabits, z_lookup, components, x, y, &meta);
 
@@ -183,7 +183,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				}
 
 				if (metabits != 0) {
-					printf("%d:%d ", metabits, meta);
+					printf("%d:%lld ", metabits, meta);
 				}
 
 				printf("// ");

@@ -102,7 +102,7 @@ void zxy2bufs(unsigned int z, unsigned int x, unsigned int y, unsigned char *sta
 }
 
 // Convert a bit stream to N xy pairs (world coordinates)
-void buf2xys(unsigned char *buf, int mapbits, int metabits, int skip, int n, unsigned int *x, unsigned int *y, unsigned int *meta) {
+void buf2xys(unsigned char *buf, int mapbits, int metabits, int skip, int n, unsigned int *x, unsigned int *y, unsigned long long *meta) {
 	int i, j;
 	int offbits = 0;
 
@@ -140,7 +140,7 @@ void buf2xys(unsigned char *buf, int mapbits, int metabits, int skip, int n, uns
 	}
 
 	for (i = metabits - 1; i >= 0; i--) {
-		int m = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
+		unsigned long long m = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
 		offbits++;
 
 		*meta |= m << i;

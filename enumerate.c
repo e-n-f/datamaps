@@ -305,7 +305,7 @@ int main(int argc, char **argv) {
 		// actually have the lowest tile number. How to fix?
 
 		unsigned int x[files[0]->components], y[files[0]->components];
-		unsigned int meta = 0;
+		unsigned long long meta = 0;
 		buf2xys(files[0]->buf, mapbits, metabits, files[0]->zoom, files[0]->components, x, y, &meta);
 
 		if (all) {
@@ -319,7 +319,7 @@ int main(int argc, char **argv) {
 			}
 
 			if (metabits != 0) {
-				printf("%d:%d ", metabits, meta);
+				printf("%d:%lld ", metabits, meta);
 			}
 
 			printf("// ");
