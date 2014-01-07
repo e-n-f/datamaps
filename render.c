@@ -33,7 +33,7 @@ int multiplier = 1;
 
 int tilesize = 256;
 
-int circle = -1;
+float circle = -1;
 
 void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff);
 
@@ -459,9 +459,22 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'x':
-			if (sscanf(optarg, "c%d", &circle) != 1) {
-				fprintf(stderr, "Can't understand -x %s\n", optarg);
-				usage(argv);
+			{
+				char unit;
+
+				if (sscanf(optarg, "c%f%c", &circle, &unit) != 2) {
+					fprintf(stderr, "Can't understand -x %s\n", optarg);
+					usage(argv);
+				} else {
+					if (unit == 'm') {
+						circle /= 3.28; // meters to feet
+					} else if (unit == 'f') {
+						;
+					} else {
+						fprintf(stderr, "Can't understand unit in -x %s\n", optarg);
+						usage(argv);
+					}
+				}
 			}
 			break;
 
