@@ -197,7 +197,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				hash = hash * 37 + 256 * xd[0];
 				hash = hash * 37 + 256 * yd[0];
 
-				for (i = 0; i < meta; i += step) {
+				for (i = 0; i < meta; i++) {
 					double xp = (xd[0] * tilesize) + xoff;
 					double yp = (yd[0] * tilesize) + yoff;
 
