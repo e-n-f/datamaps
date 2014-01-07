@@ -32,6 +32,8 @@ int multiplier = 1;
 
 int tilesize = 256;
 
+int circle = -1;
+
 void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff);
 
 int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, int colors, int xoff, int yoff) {
@@ -186,11 +188,31 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 			double b = brush * tilesize / 256.0;
 
-			if (b <= 1) {
-				drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, &tc);
+			if (circle > 0) {
+				long long i;
+				srand((x_draw << 16) ^ (y_draw));
+
+				for (i = 0; i < meta; i += step) {
+					double xp = (xd[0] * tilesize) + xoff;
+					double yp = (yd[0] * tilesize) + yoff;
+
+					xp += rand() & 0x1F;
+					yp += rand() & 0x1F;
+
+					if (b <= 1) {
+						drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
+					} else {
+						drawBrush(xp, yp, gc, bright, b, hue, &tc);
+						ret = 1;
+					}
+				}
 			} else {
-				drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, &tc);
-				ret = 1;
+				if (b <= 1) {
+					drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, &tc);
+				} else {
+					drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, &tc);
+					ret = 1;
+				}
 			}
 		} else {
 			for (k = 1; k < components; k++) {
@@ -315,7 +337,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:x:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -355,30 +377,35 @@ int main(int argc, char **argv) {
 
 		case 'B':
 			if (sscanf(optarg, "%d:%lf:%lf", &dot_base, &dot_bright, &dot_ramp) != 3) {
+				fprintf(stderr, "Can't understand -B %s\n", optarg);
 				usage(argv);
 			}
 			break;
 
 		case 'O':
 			if (sscanf(optarg, "%d:%lf:%lf", &gps_base, &gps_dist, &gps_ramp) != 3) {
+				fprintf(stderr, "Can't understand -O %s\n", optarg);
 				usage(argv);
 			}
 			break;
 
 		case 'G':
 			if (sscanf(optarg, "%lf", &display_gamma) != 1) {
+				fprintf(stderr, "Can't understand -G %s\n", optarg);
 				usage(argv);
 			}
 			break;
 
 		case 'l':
 			if (sscanf(optarg, "%lf", &line_ramp) != 1) {
+				fprintf(stderr, "Can't understand -l %s\n", optarg);
 				usage(argv);
 			}
 			break;
 
 		case 'L':
 			if (sscanf(optarg, "%lf", &line_thick) != 1) {
+				fprintf(stderr, "Can't understand -L %s\n", optarg);
 				usage(argv);
 			}
 			break;
@@ -389,6 +416,7 @@ int main(int argc, char **argv) {
 
 		case 'M':
 			if (sscanf(optarg, "%lf", &mercator) != 1) {
+				fprintf(stderr, "Can't understand -M %s\n", optarg);
 				usage(argv);
 			}
 			break;
@@ -421,7 +449,15 @@ int main(int argc, char **argv) {
 			outdir = optarg;
 			break;
 
+		case 'x':
+			if (sscanf(optarg, "c%d", &circle) != 1) {
+				fprintf(stderr, "Can't understand -x %s\n", optarg);
+				usage(argv);
+			}
+			break;
+
 		default:
+			fprintf(stderr, "Unknown option %c\n", i);
 			usage(argv);
 		}
 	}
@@ -553,7 +589,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 	// When overzoomed, also look up the adjacent tile
 	// to keep from drawing partial circles.
 
-	if (further && !dump) {
+	if ((further || circle > 0) && !dump) {
 		if (x_draw > 0) {
 			zxy2bufs(z_draw, x_draw - 1, y_draw, startbuf, endbuf, bytes);
 			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
