@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <math.h>
+#include <limits.h>
 #include "util.h"
 #include "graphics.h"
 #include "clip.h"
@@ -201,8 +202,11 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 					double xp = (xd[0] * tilesize) + xoff;
 					double yp = (yd[0] * tilesize) + yoff;
 
-					xp += rand() & 0x1F;
-					yp += rand() & 0x1F;
+					double r = sqrt(((double) (rand() & (INT_MAX - 1))) / (INT_MAX));
+					double ang = ((double) (rand() & (INT_MAX - 1))) / (INT_MAX) * 2 * M_PI;
+
+					xp += 16 * r * cos(ang) + 16;
+					yp += 16 * r * sin(ang) + 16;
 
 					if (b <= 1) {
 						drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
