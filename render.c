@@ -190,7 +190,12 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 			if (circle > 0) {
 				long long i;
-				srand((x_draw << 16) ^ (y_draw));
+				int hash;
+
+				hash = x_draw;
+				hash = hash * 37 + y_draw;
+				hash = hash * 37 + 256 * xd[0];
+				hash = hash * 37 + 256 * yd[0];
 
 				for (i = 0; i < meta; i += step) {
 					double xp = (xd[0] * tilesize) + xoff;
