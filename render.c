@@ -227,23 +227,28 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 						ret = 1;
 					}
 				} else {
-					srand(x[0] * 37 + y[0]);
+					double xc = (xd[0] * tilesize) + xoff;
+					double yc = (yd[0] * tilesize) + yoff;
 
-					for (todo += meta; todo > 0; todo -= innerstep) {
-						double xp = (xd[0] * tilesize) + xoff;
-						double yp = (yd[0] * tilesize) + yoff;
+					if (xc + size >= 0 &&
+					    yc + size >= 0 &&
+					    xc - size <= tilesize &&
+					    yc - size <= tilesize) {
+						srand(x[0] * 37 + y[0]);
 
-						double r = sqrt(((double) (rand() & (INT_MAX - 1))) / (INT_MAX));
-						double ang = ((double) (rand() & (INT_MAX - 1))) / (INT_MAX) * 2 * M_PI;
+						for (todo += meta; todo > 0; todo -= innerstep) {
+							double r = sqrt(((double) (rand() & (INT_MAX - 1))) / (INT_MAX));
+							double ang = ((double) (rand() & (INT_MAX - 1))) / (INT_MAX) * 2 * M_PI;
 
-						xp += size * r * cos(ang);
-						yp += size * r * sin(ang);
+							double xp = xc + size * r * cos(ang);
+							double yp = yc + size * r * sin(ang);
 
-						if (b <= 1) {
-							drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
-						} else {
-							drawBrush(xp, yp, gc, bright, b, hue, &tc);
-							ret = 1;
+							if (b <= 1) {
+								drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
+							} else {
+								drawBrush(xp, yp, gc, bright, b, hue, &tc);
+								ret = 1;
+							}
 						}
 					}
 				}
