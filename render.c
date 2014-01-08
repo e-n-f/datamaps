@@ -29,7 +29,7 @@ double display_gamma = .5;
 
 int antialias = 1;
 double mercator = -1;
-int multiplier = 1;
+double exponent = 2;
 
 int tilesize = 256;
 
@@ -107,9 +107,9 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 		if (z_draw > dot_base) {
 			step = 1;
-			brush = 1 << (multiplier * (z_draw - dot_base));
+			brush = exp(log(exponent) * (z_draw - dot_base));
 		} else {
-			step = 1 << (multiplier * (dot_base - z_draw));
+			step = exp(log(exponent) * (dot_base - z_draw));
 		}
 
 		bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
@@ -370,6 +370,7 @@ int main(int argc, char **argv) {
 	int color2 = -1;
 	int saturate = 1;
 	int mask = 0;
+	int adjust_exponent = 0;
 	char *outdir = NULL;
 
 	struct file {
@@ -383,7 +384,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:x:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:x:e:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -468,11 +469,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case '1':
-			multiplier = 0; // log2(1)
+			exponent = 1;
 			break;
 
 		case '4':
-			multiplier = 2; // log2(2)
+			exponent = 4;
 			break;
 
 		case 'A':
@@ -515,10 +516,22 @@ int main(int argc, char **argv) {
 			}
 			break;
 
+		case 'e':
+			if (sscanf(optarg, "%lf", &exponent) != 1) {
+				fprintf(stderr, "Can't understand -%c %s\n", i, optarg);
+				usage(argv);
+			}
+			adjust_exponent = 1;
+			break;
+
 		default:
 			fprintf(stderr, "Unknown option %c\n", i);
 			usage(argv);
 		}
+	}
+
+	if (adjust_exponent) {
+		dot_ramp = dot_ramp * 2.0 / exponent;
 	}
 
 	if (assemble) {

@@ -198,8 +198,15 @@ Brightness and thickness
 <ul>
 <li><i>Base</i> is the zoom level where each point is a single pixel. The default is 13.</li>
 <li><i>Brightness</i> is the value contributed by each dot at that zoom level. The default is 0.05917. With the default (square root) gamma, this means it takes 4 dots on the same pixel to reach full color saturation and 16 to reach full oversaturation. (It should have been 0.0625 so that it would hit it exactly.)</li>
-<li><i>Ramp</i> is the an additional brightness boost given to each dot as zoom levels get lower, or taken away as zoom levels get higher, slightly reducing the effect of halving the number of dots with each zoom level. The default is 1.23.</li>
+<li><i>Ramp</i> is the an additional brightness boost given to each dot as zoom levels get higher, or taken away as zoom levels get lower, slightly increasing the effect of halving the number of dots with each zoom level. The default is 1.23.</li>
 </ul></dd>
+
+<dt>-e <i>exponent</i></dt>
+<dd>Allows specifying a different rate at which dots are dropped at lower zoom levels.
+The default is 2, and anything much higher than that will look terrible at low zoom levels,
+and anything much lower will be very slow at low zoom levels. 1.5 seems to work pretty well
+for giving a quality boost to the low zoom levels. The <i>ramp</i> from -B is automatically
+adjusted to compensate for the change.</dd>
 
 <dt>-G <i>gamma</i></dt>
 <dd>Sets the gamma curve, which causes each additional dot plotted on the same pixel to have diminishing returns on the total brightness. The default is 0.5, for square root.</dd>
@@ -259,11 +266,11 @@ Useless
 <dd>Turn off anti-aliasing</dd>
 
 <dt>-1</dt>
-<dd>Draw every pixel at every zoom level. Zoom level 0 will be intolerably slow.</dd>
+<dd>Draw every pixel at every zoom level. Zoom level 0 will be intolerably slow. Does not automatically adjust the brightness ramp. Use -e instead.</dd>
 
 <dt>-4</dt>
 <dd>Drop 3/4 of the pixels instead of half of them with every zoom out from the base level.
-Low zooms look terrible.</dd>
+Low zooms look terrible. Does not automatically adjust the brightness ramp. Use -e instead.</dd>
 
 <dt>-M</dt>
 <dd>Mercator compensation. This raises the brightness at high latitudes. It ought to
