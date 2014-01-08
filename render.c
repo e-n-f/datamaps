@@ -118,12 +118,29 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 	}
 
 	double rat;
+	double size;
+	int innerstep = 1;
+	long long todo = 0;
 	{
 		double lat, lon;
 		tile2latlon((x_draw + .5) * (1LL << (32 - z_draw)),
 		            (y_draw + .5) * (1LL << (32 - z_draw)),
 		            32, &lat, &lon);
 		rat = cos(lat * M_PI / 180);
+
+		size = circle * .00000274;  // in degrees
+		size /= rat;                       // adjust for latitude
+		size /= 360.0 / (1 << z_draw);     // convert to tiles
+		size *= tilesize;                  // convert to pixels
+
+		if (circle > 0) {
+			// An additional 4 zoom levels without skipping
+			// XXX Why 4?
+			if (step > 1 && size > .0625) {
+				innerstep = step;
+				step = 1;
+			}
+		}
 	}
 
 	for (; start < end; start += step * bytes) {
@@ -199,7 +216,6 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			double b = brush * tilesize / 256.0;
 
 			if (circle > 0) {
-				long long i;
 				int hash;
 
 				hash = x_draw;
@@ -207,12 +223,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				hash = hash * 37 + 256 * xd[0];
 				hash = hash * 37 + 256 * yd[0];
 
-				double size = circle * .00000274;  // in degrees
-				size /= rat;                       // adjust for latitude
-				size /= 360.0 / (1 << z_draw);     // convert to tiles
-				size *= tilesize;                  // convert to pixels
-
-				for (i = 0; i < meta; i++) {
+				for (todo += meta; todo >= innerstep; todo -= innerstep) {
 					double xp = (xd[0] * tilesize) + xoff;
 					double yp = (yd[0] * tilesize) + yoff;
 
