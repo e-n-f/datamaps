@@ -265,13 +265,6 @@ Useless
 <dt>-a</dt>
 <dd>Turn off anti-aliasing</dd>
 
-<dt>-1</dt>
-<dd>Draw every pixel at every zoom level. Zoom level 0 will be intolerably slow. Does not automatically adjust the brightness ramp. Use -e instead.</dd>
-
-<dt>-4</dt>
-<dd>Drop 3/4 of the pixels instead of half of them with every zoom out from the base level.
-Low zooms look terrible. Does not automatically adjust the brightness ramp. Use -e instead.</dd>
-
 <dt>-M</dt>
 <dd>Mercator compensation. This raises the brightness at high latitudes. It ought to
 change the dot size instead.</dd>
