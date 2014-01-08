@@ -236,8 +236,8 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 						double r = sqrt(((double) (rand() & (INT_MAX - 1))) / (INT_MAX));
 						double ang = ((double) (rand() & (INT_MAX - 1))) / (INT_MAX) * 2 * M_PI;
 
-						xp += size * r * cos(ang) + size;
-						yp += size * r * sin(ang) + size;
+						xp += size * r * cos(ang);
+						yp += size * r * sin(ang);
 
 						if (b <= 1) {
 							drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
@@ -644,17 +644,19 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 	// to keep from drawing partial circles.
 
 	if ((further || circle > 0) && !dump) {
-		int pad = 1;
+		int above = 0;
+		int below = 1;
 
 		if (circle > 0) {
 			double size = cloudsize(z_draw, x_draw, y_draw);
-			pad = size * 2 + 1; // 2 because size is radius, not diameter
+			above = size + 1;
+			below = size + 1;
 		}
 		
 		int xx, yy;
 
-		for (xx = x_draw - pad; xx <= x_draw; xx++) {
-			for (yy = y_draw - pad; yy <= y_draw; yy++) {
+		for (xx = x_draw - above; xx <= x_draw + below; xx++) {
+			for (yy = y_draw - above; yy <= y_draw + below; yy++) {
 				if (x_draw != xx || y_draw != yy) {
 					zxy2bufs(z_draw, xx, yy, startbuf, endbuf, bytes);
 					process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
