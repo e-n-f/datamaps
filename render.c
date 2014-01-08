@@ -216,23 +216,32 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			double b = brush * tilesize / 256.0;
 
 			if (circle > 0) {
-				srand(x[0] * 37 + y[0]);
-
-				for (todo += meta; todo > 0; todo -= innerstep) {
-					double xp = (xd[0] * tilesize) + xoff;
-					double yp = (yd[0] * tilesize) + yoff;
-
-					double r = sqrt(((double) (rand() & (INT_MAX - 1))) / (INT_MAX));
-					double ang = ((double) (rand() & (INT_MAX - 1))) / (INT_MAX) * 2 * M_PI;
-
-					xp += size * r * cos(ang) + size;
-					yp += size * r * sin(ang) + size;
-
+				if (size < .5) {
 					if (b <= 1) {
-						drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
+						drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b * meta / innerstep, hue, &tc);
 					} else {
-						drawBrush(xp, yp, gc, bright, b, hue, &tc);
+						drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright * meta / innerstep, b, hue, &tc);
 						ret = 1;
+					}
+				} else {
+					srand(x[0] * 37 + y[0]);
+
+					for (todo += meta; todo > 0; todo -= innerstep) {
+						double xp = (xd[0] * tilesize) + xoff;
+						double yp = (yd[0] * tilesize) + yoff;
+
+						double r = sqrt(((double) (rand() & (INT_MAX - 1))) / (INT_MAX));
+						double ang = ((double) (rand() & (INT_MAX - 1))) / (INT_MAX) * 2 * M_PI;
+
+						xp += size * r * cos(ang) + size;
+						yp += size * r * sin(ang) + size;
+
+						if (b <= 1) {
+							drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
+						} else {
+							drawBrush(xp, yp, gc, bright, b, hue, &tc);
+							ret = 1;
+						}
 					}
 				}
 			} else {
