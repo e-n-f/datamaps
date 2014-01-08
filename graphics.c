@@ -455,6 +455,12 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 	if (y + width < 0) {
 		return;
 	}
+	if (x - width > g->width) {
+		return;
+	}
+	if (y - width > g->height) {
+		return;
+	}
 
 	int xx, yy;
 	for (xx = 0; xx < width; xx++) {
