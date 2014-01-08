@@ -216,14 +216,9 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			double b = brush * tilesize / 256.0;
 
 			if (circle > 0) {
-				int hash;
+				srand(x[0] * 37 + y[0]);
 
-				hash = x_draw;
-				hash = hash * 37 + y_draw;
-				hash = hash * 37 + 256 * xd[0];
-				hash = hash * 37 + 256 * yd[0];
-
-				for (todo += meta; todo >= innerstep; todo -= innerstep) {
+				for (todo += meta; todo > 0; todo -= innerstep) {
 					double xp = (xd[0] * tilesize) + xoff;
 					double yp = (yd[0] * tilesize) + yoff;
 
