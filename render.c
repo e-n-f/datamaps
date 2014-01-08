@@ -117,6 +117,15 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		start = (start - map + (step * bytes - 1)) / (step * bytes) * (step * bytes) + map;
 	}
 
+	double rat;
+	{
+		double lat, lon;
+		tile2latlon((x_draw + .5) * (1LL << (32 - z_draw)),
+		            (y_draw + .5) * (1LL << (32 - z_draw)),
+		            32, &lat, &lon);
+		rat = cos(lat * M_PI / 180);
+	}
+
 	for (; start < end; start += step * bytes) {
 		unsigned int x[components], y[components];
 		double xd[components], yd[components];
@@ -198,6 +207,11 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				hash = hash * 37 + 256 * xd[0];
 				hash = hash * 37 + 256 * yd[0];
 
+				double size = circle * .00000274;  // in degrees
+				size /= rat;                       // adjust for latitude
+				size /= 360.0 / (1 << z_draw);     // convert to tiles
+				size *= tilesize;                  // convert to pixels
+
 				for (i = 0; i < meta; i++) {
 					double xp = (xd[0] * tilesize) + xoff;
 					double yp = (yd[0] * tilesize) + yoff;
@@ -205,8 +219,8 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 					double r = sqrt(((double) (rand() & (INT_MAX - 1))) / (INT_MAX));
 					double ang = ((double) (rand() & (INT_MAX - 1))) / (INT_MAX) * 2 * M_PI;
 
-					xp += 16 * r * cos(ang) + 16;
-					yp += 16 * r * sin(ang) + 16;
+					xp += size * r * cos(ang) + size;
+					yp += size * r * sin(ang) + size;
 
 					if (b <= 1) {
 						drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
