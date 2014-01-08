@@ -113,3 +113,160 @@ to say that it should use the metadata as 256ths of the color wheel.
 
 Yes, it is silly to have to specify the size of the metadata in three different places
 in two different formats.
+
+---
+
+Options to render
+=================
+
+Input file, zoom level, and bounds
+----------------------------------
+
+The basic form is
+
+    render dir zoom x y
+
+to render the specified tile into a PNG file on the standard output.
+
+<dl>
+<dt>-A ... <i>dir zoom minlat minlon maxlat maxlon</i></dt>
+<dd>Instead of rendering a single tile (zoom/x/y), the invocation format changes
+to render the set of tiles covering the specified bounding box as a single image.</dd>
+
+<dt>-f <i>dir</i></dt>
+<dd>Also read input from <i>dir</i> in addition to the file in the main arguments.
+You can use this several times to specify several input files.</dd>
+</dl>
+
+Output file format
+------------------
+
+<dl>
+<dt>-d</dt>
+<dd>Output plain text (same format as encode uses) giving the coordinates and metadata for each point or line within the tile.</dd>
+
+<dt>-D</dt>
+<dd>Output GeoJSON giving the coordinates and metadata for each point or line within the tile.</dd>
+
+<dt>-T <i>pixels</i></dt>
+<dd>Image tiles are <i>pixels</i> pixels on a side. The default is 256. 512 is useful for high-res "retina" displays.</dd>
+
+<dt>-o <i>dir</i></dt>
+<dd>Instead of outputting the PNG image to the standard output, write it in a file in the directory <i>dir</i> in the zoom/x/y hierarchy.</dd>
+</dl>
+
+Background
+----------
+
+<dl>
+<dt>-t <i>opacity</i>
+<dd>Changes the background opacity. The default is 255, fully opaque.</dd>
+
+<dt>-m</dt>
+<dd>Makes the output image a mask: The data areas are transparent and the background is opaque.
+The default is the opposite.</dd>
+</dl>
+
+Color
+-----
+
+<dl>
+<dt>-c <i>hex</i></dt>
+<dd>Specifies <i>hex</i> to be the fully saturated color at the middle of the output range.
+The default is gray.</dd>
+
+<dt>-S <i>hex</i></dt>
+<dd>Specifies <i>hex</i> to be the oversaturated color at the end of the output range.
+The default is white.</dd>
+
+<dt>-s</dt>
+<dd>Use only the color range leading up to full saturation.
+The default treats saturated color as the middle of the range
+and allows the output to be oversaturated all the way to white (or the -S color).</dd>
+
+<dt>-w</dt>
+<dd>The background is white, not black.</dd>
+</dl>
+
+Brightness and thickness
+------------------------
+
+<dl>
+<dt>-B <i>base:brightness:ramp</i></dt>
+<dd>Sets the basic display parameters:
+
+<ul>
+<li><i>Base</i> is the zoom level where each point is a single pixel. The default is 13.</li>
+<li><i>Brightness</i> is the value contributed by each dot at that zoom level. The default is 0.05917. With the default (square root) gamma, this means it takes 4 dots on the same pixel to reach full color saturation and 16 to reach full oversaturation. (It should have been 0.0625 so that it would hit it exactly.)</li>
+<li><i>Ramp</i> is the an additional brightness boost given to each dot as zoom levels get lower, or taken away as zoom levels get higher, slightly reducing the effect of halving the number of dots with each zoom level. The default is 1.23.</li>
+</ul></dd>
+
+<dt>-G <i>gamma</i></dt>
+<dd>Sets the gamma curve, which causes each additional dot plotted on the same pixel to have diminishing returns on the total brightness. The default is 0.5, for square root.</dd>
+
+<dt>-L <i>thickness</i></dt>
+<dd>Sets the base thickness of lines. The default is 1, for a single pixel thickness.</dd>
+
+<dt>-l <i>ramp</i></dt>
+<dd>Sets the thickness ramp for lines. The line gets thicker by a factor of <i>ramp</i>
+for each zoom level beyond the base level from -B. The default is 1, for constant thickness.
+Thicker lines are drawn dimmer so that the overall brightness remains the same.</dd>
+
+</dl>
+
+Metadata
+--------
+
+<dl>
+<dt>-C <i>hues</i></dt>
+<dd>Interpret the metadata as one of <i>hues</i> hues around the color wheel.
+Numbering starts at 0 for red and continues through orange, yellow, green, blue,
+violet, and back to red.</dd>
+
+<dt>-x c<i>radius</i>f / -x c<i>radius</i>m</dt>
+<dd>Interpret the metadata as a number of points to be plotted in the specified
+<i>radius</i> (in feet or meters) around the point in the data.</dd>
+
+</dl>
+
+GPS compensation
+----------------
+
+<dl>
+<dt>-g</dt>
+<dd>Reduce the brightness of lines whose endpoints are far apart, to compensate for GPS samples that jump around, or bogus connections to to 0,0.</dd>
+
+<dt>-O <i>base:dist:ramp</i></dt>
+<dd>Tune the parameters for reasonable distances between points:
+
+<ul>
+<li><i>Base</i> is the zoom level at which only fully acceptable samples are given
+full brightness. The default is 16.</li>
+<li><i>Dist</i> is the allowable distance between samples at the <i>base</i> zoom level.
+The unit is z32 tiles, or about 1cm, and I need to make that something more human-oriented.
+The default is 1600.</li>
+<li><i>Ramp</i> is the factor of additional distance that is allowed at each lower
+zoom level. The default is 1.5.</li>
+</ul></dd>
+
+</dl>
+
+Useless
+-------
+
+<dl>
+<dt>-a</dt>
+<dd>Turn off anti-aliasing</dd>
+
+<dt>-1</dt>
+<dd>Draw every pixel at every zoom level. Zoom level 0 will be intolerably slow.</dd>
+
+<dt>-4</dt>
+<dd>Drop 3/4 of the pixels instead of half of them with every zoom out from the base level.
+Low zooms look terrible.</dd>
+
+<dt>-M</dt>
+<dd>Mercator compensation. This raises the brightness at high latitudes. It ought to
+change the dot size instead.</dd>
+
+</dl>
