@@ -37,6 +37,20 @@ float circle = -1;
 
 void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff);
 
+static double cloudsize(int z_draw, int x_draw, int y_draw) {
+	double lat, lon;
+	tile2latlon((x_draw + .5) * (1LL << (32 - z_draw)),
+		    (y_draw + .5) * (1LL << (32 - z_draw)),
+		    32, &lat, &lon);
+	double rat = cos(lat * M_PI / 180);
+
+	double size = circle * .00000274;  // in degrees
+	size /= rat;                       // adjust for latitude
+	size /= 360.0 / (1 << z_draw);     // convert to tiles
+
+	return size;
+}
+
 int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, int colors, int xoff, int yoff) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 	int ret = 0;
@@ -117,29 +131,18 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		start = (start - map + (step * bytes - 1)) / (step * bytes) * (step * bytes) + map;
 	}
 
-	double rat;
-	double size;
+	double size = cloudsize(z_draw, x_draw, y_draw);
 	int innerstep = 1;
 	long long todo = 0;
-	{
-		double lat, lon;
-		tile2latlon((x_draw + .5) * (1LL << (32 - z_draw)),
-		            (y_draw + .5) * (1LL << (32 - z_draw)),
-		            32, &lat, &lon);
-		rat = cos(lat * M_PI / 180);
 
-		size = circle * .00000274;  // in degrees
-		size /= rat;                       // adjust for latitude
-		size /= 360.0 / (1 << z_draw);     // convert to tiles
-		size *= tilesize;                  // convert to pixels
+	size *= tilesize;                  // convert to pixels
 
-		if (circle > 0) {
-			// An additional 4 zoom levels without skipping
-			// XXX Why 4?
-			if (step > 1 && size > .0625) {
-				innerstep = step;
-				step = 1;
-			}
+	if (circle > 0) {
+		// An additional 4 zoom levels without skipping
+		// XXX Why 4?
+		if (step > 1 && size > .0625) {
+			innerstep = step;
+			step = 1;
 		}
 	}
 
@@ -641,18 +644,21 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 	// to keep from drawing partial circles.
 
 	if ((further || circle > 0) && !dump) {
-		if (x_draw > 0) {
-			zxy2bufs(z_draw, x_draw - 1, y_draw, startbuf, endbuf, bytes);
-			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+		int pad = 1;
+
+		if (circle > 0) {
+			double size = cloudsize(z_draw, x_draw, y_draw);
+			pad = size * 2 + 1; // 2 because size is radius, not diameter
 		}
+		
+		int xx, yy;
 
-		if (y_draw > 0) {
-			zxy2bufs(z_draw, x_draw, y_draw - 1, startbuf, endbuf, bytes);
-			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
-
-			if (x_draw > 0) {
-				zxy2bufs(z_draw, x_draw - 1, y_draw - 1, startbuf, endbuf, bytes);
-				process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+		for (xx = x_draw - pad; xx <= x_draw; xx++) {
+			for (yy = y_draw - pad; yy <= y_draw; yy++) {
+				if (x_draw != xx || y_draw != yy) {
+					zxy2bufs(z_draw, xx, yy, startbuf, endbuf, bytes);
+					process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+				}
 			}
 		}
 	}
