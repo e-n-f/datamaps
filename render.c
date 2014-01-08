@@ -649,8 +649,8 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 	// to keep from drawing partial circles.
 
 	if ((further || circle > 0) && !dump) {
-		int above = 0;
-		int below = 1;
+		int above = 1;
+		int below = 0;
 
 		if (circle > 0) {
 			double size = cloudsize(z_draw, x_draw, y_draw);
