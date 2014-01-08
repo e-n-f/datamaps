@@ -499,7 +499,7 @@ int main(int argc, char **argv) {
 					usage(argv);
 				} else {
 					if (unit == 'm') {
-						circle /= 3.28; // meters to feet
+						circle *= 3.28; // meters to feet
 					} else if (unit == 'f') {
 						;
 					} else {
