@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <math.h>
+#include <limits.h>
 #include "util.h"
 #include "graphics.h"
 #include "clip.h"
@@ -32,7 +33,23 @@ int multiplier = 1;
 
 int tilesize = 256;
 
+float circle = -1;
+
 void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff);
+
+static double cloudsize(int z_draw, int x_draw, int y_draw) {
+	double lat, lon;
+	tile2latlon((x_draw + .5) * (1LL << (32 - z_draw)),
+		    (y_draw + .5) * (1LL << (32 - z_draw)),
+		    32, &lat, &lon);
+	double rat = cos(lat * M_PI / 180);
+
+	double size = circle * .00000274;  // in degrees
+	size /= rat;                       // adjust for latitude
+	size /= 360.0 / (1 << z_draw);     // convert to tiles
+
+	return size;
+}
 
 int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, int colors, int xoff, int yoff) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
@@ -114,6 +131,21 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		start = (start - map + (step * bytes - 1)) / (step * bytes) * (step * bytes) + map;
 	}
 
+	double size = cloudsize(z_draw, x_draw, y_draw);
+	int innerstep = 1;
+	long long todo = 0;
+
+	size *= tilesize;                  // convert to pixels
+
+	if (circle > 0) {
+		// An additional 4 zoom levels without skipping
+		// XXX Why 4?
+		if (step > 1 && size > .0625) {
+			innerstep = step;
+			step = 1;
+		}
+	}
+
 	for (; start < end; start += step * bytes) {
 		unsigned int x[components], y[components];
 		double xd[components], yd[components];
@@ -186,11 +218,47 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 			double b = brush * tilesize / 256.0;
 
-			if (b <= 1) {
-				drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, &tc);
+			if (circle > 0) {
+				if (size < .5) {
+					if (b <= 1) {
+						drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b * meta / innerstep, hue, &tc);
+					} else {
+						drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright * meta / innerstep, b, hue, &tc);
+						ret = 1;
+					}
+				} else {
+					double xc = (xd[0] * tilesize) + xoff;
+					double yc = (yd[0] * tilesize) + yoff;
+
+					if (xc + size >= 0 &&
+					    yc + size >= 0 &&
+					    xc - size <= tilesize &&
+					    yc - size <= tilesize) {
+						srand(x[0] * 37 + y[0]);
+
+						for (todo += meta; todo > 0; todo -= innerstep) {
+							double r = sqrt(((double) (rand() & (INT_MAX - 1))) / (INT_MAX));
+							double ang = ((double) (rand() & (INT_MAX - 1))) / (INT_MAX) * 2 * M_PI;
+
+							double xp = xc + size * r * cos(ang);
+							double yp = yc + size * r * sin(ang);
+
+							if (b <= 1) {
+								drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
+							} else {
+								drawBrush(xp, yp, gc, bright, b, hue, &tc);
+								ret = 1;
+							}
+						}
+					}
+				}
 			} else {
-				drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, &tc);
-				ret = 1;
+				if (b <= 1) {
+					drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, &tc);
+				} else {
+					drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, &tc);
+					ret = 1;
+				}
 			}
 		} else {
 			for (k = 1; k < components; k++) {
@@ -315,7 +383,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:a41Awc:l:L:smf:S:T:o:x:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -355,30 +423,35 @@ int main(int argc, char **argv) {
 
 		case 'B':
 			if (sscanf(optarg, "%d:%lf:%lf", &dot_base, &dot_bright, &dot_ramp) != 3) {
+				fprintf(stderr, "Can't understand -B %s\n", optarg);
 				usage(argv);
 			}
 			break;
 
 		case 'O':
 			if (sscanf(optarg, "%d:%lf:%lf", &gps_base, &gps_dist, &gps_ramp) != 3) {
+				fprintf(stderr, "Can't understand -O %s\n", optarg);
 				usage(argv);
 			}
 			break;
 
 		case 'G':
 			if (sscanf(optarg, "%lf", &display_gamma) != 1) {
+				fprintf(stderr, "Can't understand -G %s\n", optarg);
 				usage(argv);
 			}
 			break;
 
 		case 'l':
 			if (sscanf(optarg, "%lf", &line_ramp) != 1) {
+				fprintf(stderr, "Can't understand -l %s\n", optarg);
 				usage(argv);
 			}
 			break;
 
 		case 'L':
 			if (sscanf(optarg, "%lf", &line_thick) != 1) {
+				fprintf(stderr, "Can't understand -L %s\n", optarg);
 				usage(argv);
 			}
 			break;
@@ -389,6 +462,7 @@ int main(int argc, char **argv) {
 
 		case 'M':
 			if (sscanf(optarg, "%lf", &mercator) != 1) {
+				fprintf(stderr, "Can't understand -M %s\n", optarg);
 				usage(argv);
 			}
 			break;
@@ -421,7 +495,28 @@ int main(int argc, char **argv) {
 			outdir = optarg;
 			break;
 
+		case 'x':
+			{
+				char unit;
+
+				if (sscanf(optarg, "c%f%c", &circle, &unit) != 2) {
+					fprintf(stderr, "Can't understand -x %s\n", optarg);
+					usage(argv);
+				} else {
+					if (unit == 'm') {
+						circle *= 3.28; // meters to feet
+					} else if (unit == 'f') {
+						;
+					} else {
+						fprintf(stderr, "Can't understand unit in -x %s\n", optarg);
+						usage(argv);
+					}
+				}
+			}
+			break;
+
 		default:
+			fprintf(stderr, "Unknown option %c\n", i);
 			usage(argv);
 		}
 	}
@@ -553,19 +648,24 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 	// When overzoomed, also look up the adjacent tile
 	// to keep from drawing partial circles.
 
-	if (further && !dump) {
-		if (x_draw > 0) {
-			zxy2bufs(z_draw, x_draw - 1, y_draw, startbuf, endbuf, bytes);
-			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+	if ((further || circle > 0) && !dump) {
+		int above = 1;
+		int below = 0;
+
+		if (circle > 0) {
+			double size = cloudsize(z_draw, x_draw, y_draw);
+			above = size + 1;
+			below = size + 1;
 		}
+		
+		int xx, yy;
 
-		if (y_draw > 0) {
-			zxy2bufs(z_draw, x_draw, y_draw - 1, startbuf, endbuf, bytes);
-			process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
-
-			if (x_draw > 0) {
-				zxy2bufs(z_draw, x_draw - 1, y_draw - 1, startbuf, endbuf, bytes);
-				process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+		for (xx = x_draw - above; xx <= x_draw + below; xx++) {
+			for (yy = y_draw - above; yy <= y_draw + below; yy++) {
+				if (x_draw != xx || y_draw != yy) {
+					zxy2bufs(z_draw, xx, yy, startbuf, endbuf, bytes);
+					process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+				}
 			}
 		}
 	}
