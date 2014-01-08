@@ -8,8 +8,8 @@ PNG_LDFLAGS=-lpng
 endif
 
 ENCODE_OBJS = encode.o util.o
-RENDER_CORE_OBJS = render.o util.o clip.o
-ENUMERATE_OBJS = enumerate.o util.o
+RENDER_CORE_OBJS = render.o util.o clip.o dump.o
+ENUMERATE_OBJS = enumerate.o util.o dump.o
 MERGE_OBJS = merge.o util.o
 
 RENDER_VECTOR_OBJS = vector_tile.pb.o vector.o

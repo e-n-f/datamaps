@@ -8,6 +8,7 @@
 #include <math.h>
 #include "util.h"
 #include "graphics.h"
+#include "dump.h"
 
 struct file {
 	FILE *f;
@@ -169,7 +170,7 @@ int main(int argc, char **argv) {
 	bounds.maxlat = 90;
 	bounds.maxlon = 180;
 
-	while ((i = getopt(argc, argv, "z:Z:adsvb:")) != -1) {
+	while ((i = getopt(argc, argv, "z:Z:aDdsvb:")) != -1) {
 		switch (i) {
 		case 'z':
 			maxzoom = atoi(optarg);
@@ -189,6 +190,10 @@ int main(int argc, char **argv) {
 
 		case 'a':
 			all = 1;
+			break;
+
+		case 'D':
+			all = 2;
 			break;
 
 		case 'b':
@@ -291,6 +296,10 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if (all) {
+		dump_begin(all);
+	}
+
 	while (1) {
 		qsort(files, nfiles, sizeof(struct file *), filecmp);
 
@@ -309,26 +318,7 @@ int main(int argc, char **argv) {
 		buf2xys(files[0]->buf, mapbits, metabits, files[0]->zoom, files[0]->components, x, y, &meta);
 
 		if (all) {
-			int i;
-
-			for (i = 0; i < files[0]->components; i++) {
-				double lat, lon;
-				tile2latlon(x[i], y[i], 32, &lat, &lon);
-
-				printf("%lf,%lf ", lat, lon);
-			}
-
-			if (metabits != 0) {
-				printf("%d:%lld ", metabits, meta);
-			}
-
-			printf("// ");
-
-			for (i = 0; i < files[0]->components; i++) {
-				printf("%08x %08x ", x[i], y[i]);
-			}
-
-			printf("\n");
+			dump_out(all, x, y, files[0]->components, metabits, meta);
 		} else {
 			long long xx = x[0], yy = y[0];
 
@@ -340,7 +330,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (!all) {
+	if (all) {
+		dump_end(all);
+	} else {
 		handle(-1, -1, tile, fname, minzoom, maxzoom, showdist, NULL, NULL, files, sibling, verbose, &bounds);
 	}
 
