@@ -20,7 +20,7 @@ void dump_end(int dump) {
 	}
 }
 
-void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int metabits, int meta) {
+void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int metabits, long long meta) {
 	if (dump == 2) {
 		if (!first) {
 			printf(",");
@@ -33,7 +33,7 @@ void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int me
 		printf("      \"properties\": {");
 
 		if (metabits != 0) {
-			printf(" \"metadata\": %d ", meta);
+			printf(" \"metadata\": %lld ", meta);
 		}
 
 		printf("},\n");
@@ -83,7 +83,7 @@ void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int me
 		}
 
 		if (metabits != 0) {
-			printf("%d:%d ", metabits, meta);
+			printf("%d:%lld ", metabits, meta);
 		}
 
 		printf("// ");
