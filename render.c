@@ -162,7 +162,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		}
 	}
 
-	const double b = brush * tilesize / 256.0;
+	const double b = brush * (tilesize / 256.0) * (tilesize / 256.0);
 	double radius;
 
 	if (point_size == 1) {
