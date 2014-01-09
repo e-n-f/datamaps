@@ -129,6 +129,17 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		}
 	}
 
+	if (mercator >= 0) {
+		double lat, lon;
+		tile2latlon((x_draw + .5) * (1LL << (32 - z_draw)),
+			    (y_draw + .5) * (1LL << (32 - z_draw)),
+			    32, &lat, &lon);
+		double rat = cos(lat * M_PI / 180);
+
+		double base = cos(mercator * M_PI / 180);
+		brush /= rat * rat / (base * base);
+	}
+
 	if (dump) {
 		step = 1;
 	} else {
@@ -191,13 +202,6 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		}
 
 		double bright = bright1;
-		if (mercator >= 0) {
-			double lat, lon;
-			tile2latlon(x[0], y[0], 32, &lat, &lon);
-			double rat = cos(lat * M_PI / 180);
-			double base = cos(mercator * M_PI / 180);
-			bright /= rat * rat / (base * base);
-		}
 
 		for (k = 0; k < components; k++) {
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);

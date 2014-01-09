@@ -241,8 +241,8 @@ violet, and back to red.</dd>
 
 </dl>
 
-GPS compensation
-----------------
+Compensation
+------------
 
 <dl>
 <dt>-g</dt>
@@ -261,6 +261,10 @@ The default is 1600.</li>
 zoom level. The default is 1.5.</li>
 </ul></dd>
 
+<dt>-M <i>latitude</i></dt>
+<dd>Mercator compensation. Makes the dots bigger at latitudes higher than the one specified
+and smaller at latitudes closer to the equator.</dd>
+
 </dl>
 
 Useless
@@ -269,9 +273,5 @@ Useless
 <dl>
 <dt>-a</dt>
 <dd>Turn off anti-aliasing</dd>
-
-<dt>-M</dt>
-<dd>Mercator compensation. This raises the brightness at high latitudes. It ought to
-change the dot size instead.</dd>
 
 </dl>
