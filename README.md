@@ -219,7 +219,7 @@ adjusted to compensate for the change.</dd>
 for each zoom level beyond the base level from -B. The default is 1, for constant thickness.
 Thicker lines are drawn dimmer so that the overall brightness remains the same.</dd>
 
-<dt>-p <i>diameter</i></dt>
+<dt>-p <i>area</i></dt>
 <dd>Specifies a multiplier for dot sizes. Point brightness is automatically reduced by
 the same factor so the total brightness remains constant, just diffused.
 The default is 1.</dd>
