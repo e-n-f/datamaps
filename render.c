@@ -165,12 +165,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 	const double b = brush * (tilesize / 256.0) * (tilesize / 256.0);
 	double radius;
 
-	if (point_size == 1) {
-		// XXX Is anyone depending on down-and-right brushes?
-		radius = 0;
-	} else {
-		radius = sqrt(b / M_PI);
-	}
+	radius = sqrt(b / M_PI);
 
 	for (; start < end; start += step * bytes) {
 		unsigned int x[components], y[components];
@@ -673,11 +668,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 
 	if ((further || circle > 0) && !dump) {
 		int above = 1;
-		int below = 0;
-
-		if (point_size > 1) {
-			below = 1;
-		}
+		int below = 1;
 
 		if (circle > 0) {
 			double size = cloudsize(z_draw, x_draw, y_draw);
