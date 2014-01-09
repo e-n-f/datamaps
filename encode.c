@@ -181,9 +181,11 @@ void insert(struct merge *m, struct merge **head, unsigned char *map, int bytes)
 	*head = m;
 }
 
-void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes) {
+void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec) {
 	int i;
 	struct merge *head = NULL;
+	long long along = 0;
+	long long reported = -1;
 
 	for (i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
@@ -201,6 +203,13 @@ void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int b
 
 		if (m->start < m->end) {
 			insert(m, &head, map, bytes);
+		}
+
+		along++;
+		long long report = 100 * along / nrec;
+		if (report != reported) {
+			fprintf(stderr, "Merging: %lld%%\r", report);
+			reported = report;
 		}
 	}
 }
@@ -319,7 +328,7 @@ int main(int argc, char **argv) {
 				end = st.st_size;
 			}
 
-			fprintf(stderr, "part %lld of %d (start %lld end %lld)\n", start / unit + 1, nmerges, start, end);
+			fprintf(stderr, "Sorting part %lld of %d\r", start / unit + 1, nmerges);
 
 			merges[start / unit].start = start;
 			merges[start / unit].end = end;
@@ -348,6 +357,8 @@ int main(int argc, char **argv) {
 			munmap(map2, end - start);
 		}
 
+		printf("\n");
+
 		void *map = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 		if (map == MAP_FAILED) {
 			perror("mmap");
@@ -365,7 +376,7 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
-		merge(merges, nmerges, map, f, bytes);
+		merge(merges, nmerges, map, f, bytes, st.st_size / bytes);
 
 		munmap(map, st.st_size);
 		fclose(f);
