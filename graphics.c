@@ -405,11 +405,6 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 		unsigned char *temp = malloc(bigwidth * bigwidth);
 		memset(temp, '\0', bigwidth * bigwidth);
 
-		int off = 0;
-		if (brush <= 2) {
-			off = MULT;
-		}
-
 		int sum = 0;
 		int xa;
 		for (xa = 0; xa < 2 * radius; xa++) {
@@ -418,8 +413,8 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 
 			int ya;
 			for (ya = radius - yy; ya < radius + yy; ya++) {
-				int y1 = ya - off;
-				int x1 = xa - off;
+				int y1 = ya;
+				int x1 = xa;
 
 				if (y1 >= 0 && y1 < bigwidth && x1 >= 0 && x1 < bigwidth) {
 					temp[bigwidth * y1 + x1] = 1;
