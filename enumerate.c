@@ -48,16 +48,12 @@ struct bounds {
 };
 
 void handle(long long xx, long long yy, struct tile *tile, char *fname, int minzoom, int maxzoom, int showdist, unsigned int *x, unsigned int *y, struct file **files, int sibling, int verbose, struct bounds *bounds) {
-	double lat, lon;
 	int z;
 
 	for (z = minzoom; z <= maxzoom; z++) {
 		if (tile[z].xtile != xx >> (32 - z) ||
 		    tile[z].ytile != yy >> (32 - z)) {
 			if (tile[z].count > 0) {
-				tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
-					    32, &lat, &lon);
-
 				printf("%s %d %d %d",
 					fname,
 					z,
@@ -65,9 +61,11 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 					tile[z].ytile);
 
 				if (verbose) {
-					printf(" %lld %lf,%lf",
-					tile[z].count,
-					lat, lon);
+					double lat, lon;
+					tile2latlon(tile[z].xsum / tile[z].count, tile[z].ysum / tile[z].count,
+						    32, &lat, &lon);
+
+					printf(" %lld %lf,%lf", tile[z].count, lat, lon);
 				}
 
 				if (showdist) {
@@ -88,18 +86,18 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 					for (qx = 0; qx < 2; qx++) {
 						for (qy = 0; qy < 2; qy++) {
 							if (tile[z].sibling[qx][qy] == 0) {
-								tile2latlon(tile[z].xtile / 2 * 2 + qx,
-									    tile[z].ytile / 2 * 2 + qy,
-									    z, &lat, &lon);
-
 								printf("%s %d %d %d",
 									fname, z,
 									tile[z].xtile / 2 * 2 + qx,
 									tile[z].ytile / 2 * 2 + qy);
 
 								if (verbose) {
-									printf(" 0 %lf,%lf",
-										lat, lon);
+									double lat, lon;
+									tile2latlon(tile[z].xtile / 2 * 2 + qx,
+										    tile[z].ytile / 2 * 2 + qy,
+										    z, &lat, &lon);
+
+									printf(" 0 %lf,%lf", lat, lon);
 								}
 
 								if (showdist) {
@@ -122,10 +120,19 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 			tile[z].xsum = tile[z].ysum = 0;
 		}
 
-		tile2latlon(xx, yy, 32, &lat, &lon);
-		if (lat >= bounds->minlat && lat <= bounds->maxlat &&
-		    lon >= bounds->minlon && lon <= bounds->maxlon) {
+		int include = 0;
+		if (bounds == NULL) {
+			include = 1;
+		} else {
+			double lat, lon;
+			tile2latlon(xx, yy, 32, &lat, &lon);
+			if (lat >= bounds->minlat && lat <= bounds->maxlat &&
+			    lon >= bounds->minlon && lon <= bounds->maxlon) {
+				include = 1;
+			}
+		}
 
+		if (include) {
 			tile[z].count++;
 			tile[z].xsum += xx;
 			tile[z].ysum += yy;
@@ -163,6 +170,7 @@ int main(int argc, char **argv) {
 	int sibling = 0;
 	int all = 0;
 	int verbose = 0;
+	int usebounds = 0;
 
 	struct bounds bounds;
 	bounds.minlat = -90;
@@ -201,6 +209,8 @@ int main(int argc, char **argv) {
 					&bounds.maxlat, &bounds.maxlon) != 4) {
 				usage(argv);
 			}
+			usebounds = 1;
+			break;
 
 		case 'v':
 			verbose = 1;
@@ -322,7 +332,8 @@ int main(int argc, char **argv) {
 		} else {
 			long long xx = x[0], yy = y[0];
 
-			handle(xx, yy, tile, fname, minzoom, maxzoom, showdist, x, y, files, sibling, verbose, &bounds);
+			handle(xx, yy, tile, fname, minzoom, maxzoom, showdist, x, y, files, sibling, verbose,
+			       usebounds ? &bounds : NULL);
 		}
 
 		if (fread(files[0]->buf, files[0]->bytes, 1, files[0]->f) != 1) {
@@ -333,7 +344,8 @@ int main(int argc, char **argv) {
 	if (all) {
 		dump_end(all);
 	} else {
-		handle(-1, -1, tile, fname, minzoom, maxzoom, showdist, NULL, NULL, files, sibling, verbose, &bounds);
+		handle(-1, -1, tile, fname, minzoom, maxzoom, showdist, NULL, NULL, files, sibling, verbose,
+		       usebounds ? &bounds : NULL);
 	}
 
 	return 0;
