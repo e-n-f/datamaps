@@ -235,6 +235,10 @@ Metadata
 Numbering starts at 0 for red and continues through orange, yellow, green, blue,
 violet, and back to red.</dd>
 
+<dt>-C <i>meta1:hue1:meta2:hue2</i></dt>
+<dd>Specify a range of hues that correspond to a domain of meta values.
+The hues are numbered in degrees: 0 for red, 30 for orange, 60 for yellow, 120 for green, 180 for cyan, 240 for blue, 300 for violet. You can specify hues below 0 or above 360 to wrap around across red.</dd>
+
 <dt>-x c<i>radius</i>f / -x c<i>radius</i>m</dt>
 <dd>Interpret the metadata as a number of points to be plotted in the specified
 <i>radius</i> (in feet or meters) around the point in the data.</dd>

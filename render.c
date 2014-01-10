@@ -37,7 +37,17 @@ int tilesize = 256;
 
 float circle = -1;
 
-void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff);
+struct color_range {
+	long long meta1;
+	double hue1;
+
+	long long meta2;
+	double hue2;
+
+	int active;
+};
+
+void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, struct color_range *colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff);
 
 static double cloudsize(int z_draw, int x_draw, int y_draw) {
 	double lat, lon;
@@ -53,7 +63,7 @@ static double cloudsize(int z_draw, int x_draw, int y_draw) {
 	return size;
 }
 
-int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, int colors, int xoff, int yoff) {
+int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, struct color_range *colors, int xoff, int yoff) {
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 	int ret = 0;
 
@@ -192,8 +202,14 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		}
 
 		double hue = -1;
-		if (metabits > 0 && colors > 0) {
-			hue = (double) meta / colors;
+		if (metabits > 0 && colors->active) {
+			hue = (((double) meta - colors->meta1) / (colors->meta2 - colors->meta1) * (colors->hue2 - colors->hue1) + colors->hue1) / 360;
+			while (hue < 0) {
+				hue++;
+			}
+			while (hue > 1) {
+				hue--;
+			}
 		}
 
 		double bright = bright1;
@@ -375,7 +391,7 @@ int main(int argc, char **argv) {
 	int transparency = 255;
 	int dump = 0;
 	int gps = 0;
-	int colors = 0;
+	struct color_range colors;
 	int assemble = 0;
 	int invert = 0;
 	int color = -1;
@@ -383,6 +399,8 @@ int main(int argc, char **argv) {
 	int saturate = 1;
 	int mask = 0;
 	char *outdir = NULL;
+
+	colors.active = 0;
 
 	struct file {
 		char *name;
@@ -422,7 +440,20 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'C':
-			colors = atoi(optarg);
+			if (sscanf(optarg, "%lld:%lf:%lld:%lf",
+				&colors.meta1, &colors.hue1,
+				&colors.meta2, &colors.hue2) == 4) {
+				colors.active = 1;
+			} else if (sscanf(optarg, "%lld", &colors.meta2) == 1) {
+				colors.meta1 = 0;
+				colors.hue1 = 0;
+				colors.hue2 = 360;
+				colors.active = 1;
+			} else {
+				fprintf(stderr, "Can't understand -%c %s\n", i, optarg);
+				usage(argv);
+			}
+
 			break;
 
 		case 'c':
@@ -618,7 +649,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
 
 				for (i = 0; i < nfiles; i++) {
-					do_tile(gc, z_draw, x, y, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1) * tilesize, (y - y1) * tilesize);
+					do_tile(gc, z_draw, x, y, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1) * tilesize, (y - y1) * tilesize);
 				}
 			}
 		}
@@ -635,7 +666,7 @@ int main(int argc, char **argv) {
 		unsigned int y_draw = atoi(argv[optind + 3]);
 
 		for (i = 0; i < nfiles; i++) {
-			do_tile(gc, z_draw, x_draw, y_draw, files[i].bytes, colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, 0, 0);
+			do_tile(gc, z_draw, x_draw, y_draw, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, 0, 0);
 		}
 
 		if (!dump) {
@@ -652,7 +683,7 @@ int main(int argc, char **argv) {
 }
 
 void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw,
-		int bytes, int colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass,
+		int bytes, struct color_range *colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass,
 		int xoff, int yoff) {
 	int i;
 
