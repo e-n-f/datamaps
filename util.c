@@ -102,14 +102,10 @@ void zxy2bufs(unsigned int z, unsigned int x, unsigned int y, unsigned char *sta
 }
 
 // Convert a bit stream to N xy pairs (world coordinates)
-void buf2xys(unsigned char *buf, int mapbits, int metabits, int skip, int n, unsigned int *x, unsigned int *y, unsigned long long *meta) {
+void buf2xys(const unsigned char *const buf, const int mapbits, const int metabits, const int skip, const int n, unsigned int *x, unsigned int *y, unsigned long long *meta) {
 	int i, j;
 	int offbits = 0;
-
-	for (i = 0; i < n; i++) {
-		x[i] = 0;
-		y[i] = 0;
-	}
+	unsigned int xx = 0, yy = 0;
 
 	// First pull off the common bits
 
@@ -119,24 +115,28 @@ void buf2xys(unsigned char *buf, int mapbits, int metabits, int skip, int n, uns
 		int x0 = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
 		offbits++;
 
-		for (j = 0; j < n; j++) {
-			x[j] |= x0 << i;
-			y[j] |= y0 << i;
-		}
+		xx |= x0 << i;
+		yy |= y0 << i;
 	}
 
 	// and then the remainder for each component
 
 	for (j = 0; j < n; j++) {
+		unsigned int xj = xx;
+		unsigned int yj = yy;
+
 		for (i = 31 - skip; i > 31 - mapbits / 2; i--) {
 			int y0 = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
 			offbits++;
 			int x0 = (buf[offbits / 8] >> (7 - offbits % 8)) & 1;
 			offbits++;
 
-			x[j] |= x0 << i;
-			y[j] |= y0 << i;
+			xj |= x0 << i;
+			yj |= y0 << i;
 		}
+
+		x[j] = xj;
+		y[j] = yj;
 	}
 
 	for (i = metabits - 1; i >= 0; i--) {
