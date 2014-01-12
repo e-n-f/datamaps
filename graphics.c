@@ -398,10 +398,11 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 		thebrush = brush;
 		thegaussian = gaussian;
 
-#define MULT 8
+#define MULT 9
 
 		double radius = MULT * sqrt(brush / M_PI);
-		int bigwidth = (((int) (2 * radius + (MULT - 1))) / MULT) * MULT;
+		int bigwidth = 2 * ceil(radius / MULT) * MULT + MULT;
+		int mid = bigwidth / 2;
 		brushwidth = bigwidth / MULT;
 
 		double *temp = malloc(bigwidth * bigwidth * sizeof(double));
@@ -409,12 +410,12 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 
 		double sum = 0;
 		int xa;
-		for (xa = 0; xa < 2 * radius; xa++) {
-			double dx = acos((xa - radius) / radius);
-			double yy = fabs(sin(dx)) * radius;
+		for (xa = mid - floor(radius); xa <= mid + floor(radius); xa++) {
+			double dx = acos((xa - mid) / radius);
+			double yy = floor(fabs(sin(dx)) * radius);
 
 			int ya;
-			for (ya = radius - yy; ya < radius + yy; ya++) {
+			for (ya = mid - yy; ya <= mid + yy; ya++) {
 				int y1 = ya;
 				int x1 = xa;
 
@@ -422,8 +423,8 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 					double inc = 1;
 
 					if (gaussian) {
-						double xx = (xa - radius) / radius;
-						double yy = (ya - radius) / radius;
+						double xx = (xa - mid) / radius;
+						double yy = (ya - mid) / radius;
 						double d = sqrt(xx * xx + yy * yy);
 
 						inc = exp(-(d * d) / (2.0 / (3.0 * 3.0)));
@@ -453,6 +454,10 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 
 		free(temp);
 	}
+
+	// match where single pixels are drawn
+	x -= ceil(brushwidth / 2) + .5;
+	y -= ceil(brushwidth / 2) + .5;
 
 	int width = brushwidth;
 

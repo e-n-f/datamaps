@@ -174,9 +174,6 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 	}
 
 	const double b = brush * (tilesize / 256.0) * (tilesize / 256.0);
-	double radius;
-
-	radius = sqrt(b / M_PI);
 
 	for (; start < end; start += step * bytes) {
 		unsigned int x[components], y[components];
@@ -252,7 +249,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 					if (b <= 1) {
 						drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b * meta / innerstep, hue, &tc);
 					} else {
-						drawBrush((xd[0] * tilesize) + xoff - radius, (yd[0] * tilesize) + yoff - radius, gc, bright * meta / innerstep, b, hue, gaussian, &tc);
+						drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright * meta / innerstep, b, hue, gaussian, &tc);
 						ret = 1;
 					}
 				} else {
@@ -275,7 +272,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 							if (b <= 1) {
 								drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
 							} else {
-								drawBrush(xp - radius, yp - radius, gc, bright, b, hue, gaussian, &tc);
+								drawBrush(xp, yp, gc, bright, b, hue, gaussian, &tc);
 								ret = 1;
 							}
 						}
@@ -285,7 +282,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				if (b <= 1) {
 					drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, &tc);
 				} else {
-					drawBrush((xd[0] * tilesize) + xoff - radius, (yd[0] * tilesize) + yoff - radius, gc, bright, b, hue, gaussian, &tc);
+					drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, gaussian, &tc);
 					ret = 1;
 				}
 			}
