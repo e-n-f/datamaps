@@ -224,6 +224,10 @@ Thicker lines are drawn dimmer so that the overall brightness remains the same.<
 the same factor so the total brightness remains constant, just diffused.
 The default is 1.</dd>
 
+<dt>-p g<i>area</i></dt>
+<dd>Specifies a Gaussian brush instead of a flat disk, as well as a
+multiplier for dot sizes.</dd>
+
 </dl>
 
 Metadata

@@ -18,6 +18,7 @@ double dot_bright = 0.05917;
 double dot_ramp = 1.23;
 
 double point_size = 1;
+int gaussian = 0;
 
 double line_per_dot = 6.64;
 double line_ramp = 1;
@@ -251,7 +252,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 					if (b <= 1) {
 						drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b * meta / innerstep, hue, &tc);
 					} else {
-						drawBrush((xd[0] * tilesize) + xoff - radius, (yd[0] * tilesize) + yoff - radius, gc, bright * meta / innerstep, b, hue, &tc);
+						drawBrush((xd[0] * tilesize) + xoff - radius, (yd[0] * tilesize) + yoff - radius, gc, bright * meta / innerstep, b, hue, gaussian, &tc);
 						ret = 1;
 					}
 				} else {
@@ -274,7 +275,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 							if (b <= 1) {
 								drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
 							} else {
-								drawBrush(xp - radius, yp - radius, gc, bright, b, hue, &tc);
+								drawBrush(xp - radius, yp - radius, gc, bright, b, hue, gaussian, &tc);
 								ret = 1;
 							}
 						}
@@ -284,7 +285,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				if (b <= 1) {
 					drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, &tc);
 				} else {
-					drawBrush((xd[0] * tilesize) + xoff - radius, (yd[0] * tilesize) + yoff - radius, gc, bright, b, hue, &tc);
+					drawBrush((xd[0] * tilesize) + xoff - radius, (yd[0] * tilesize) + yoff - radius, gc, bright, b, hue, gaussian, &tc);
 					ret = 1;
 				}
 			}
@@ -558,7 +559,9 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'p':
-			if (sscanf(optarg, "%lf", &point_size) != 1) {
+			if (sscanf(optarg, "g%lf", &point_size) == 1) {
+				gaussian = 1;
+			} else if (sscanf(optarg, "%lf", &point_size) != 1) {
 				fprintf(stderr, "Can't understand -%c %s\n", i, optarg);
 				usage(argv);
 			}

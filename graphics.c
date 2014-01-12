@@ -389,12 +389,14 @@ void drawPixel(double x, double y, struct graphics *g, double bright, double hue
 
 static double thebrush = -1;
 static int brushwidth = -1;
-static unsigned char *brushbytes = NULL;
+static int thegaussian = -1;
+static double *brushbytes = NULL;
 
-void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, struct tilecontext *tc) {
-	if (brush != thebrush) {
+void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, int gaussian, struct tilecontext *tc) {
+	if (brush != thebrush || gaussian != thegaussian) {
 		free(brushbytes);
 		thebrush = brush;
+		thegaussian = gaussian;
 
 #define MULT 8
 
@@ -402,10 +404,10 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 		int bigwidth = (((int) (2 * radius + (MULT - 1))) / MULT) * MULT;
 		brushwidth = bigwidth / MULT;
 
-		unsigned char *temp = malloc(bigwidth * bigwidth);
-		memset(temp, '\0', bigwidth * bigwidth);
+		double *temp = malloc(bigwidth * bigwidth * sizeof(double));
+		memset(temp, '\0', bigwidth * bigwidth * sizeof(double));
 
-		int sum = 0;
+		double sum = 0;
 		int xa;
 		for (xa = 0; xa < 2 * radius; xa++) {
 			double dx = acos((xa - radius) / radius);
@@ -417,14 +419,24 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 				int x1 = xa;
 
 				if (y1 >= 0 && y1 < bigwidth && x1 >= 0 && x1 < bigwidth) {
-					temp[bigwidth * y1 + x1] = 1;
-					sum++;
+					double inc = 1;
+
+					if (gaussian) {
+						double xx = (xa - radius) / radius;
+						double yy = (ya - radius) / radius;
+						double d = sqrt(xx * xx + yy * yy);
+
+						inc = exp(-(d * d) / (2.0 / (3.0 * 3.0)));
+					}
+
+					temp[bigwidth * y1 + x1] = inc;
+					sum += inc;
 				}
 			}
 		}
 
-		brushbytes = malloc(brushwidth * brushwidth);
-		memset(brushbytes, '\0', brushwidth * brushwidth);
+		brushbytes = malloc(brushwidth * brushwidth * sizeof(double));
+		memset(brushbytes, '\0', brushwidth * brushwidth * sizeof(double));
 
 		for (xa = 0; xa < bigwidth; xa++) {
 			int ya;
