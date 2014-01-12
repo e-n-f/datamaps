@@ -94,6 +94,6 @@ void drawPixel(double x, double y, struct graphics *g, double bright, double hue
 	printf("%.6f,%.6f\n", lat, lon);
 }
 
-void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, struct tilecontext *tc) {
+void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, int gaussian, struct tilecontext *tc) {
 	drawPixel(x, y, g, bright, hue, tc);
 }

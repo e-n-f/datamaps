@@ -376,6 +376,6 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 	e->npoints++;
 }
 
-void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, struct tilecontext *tc) {
+void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, int gaussian, struct tilecontext *tc) {
 	drawPixel(x, y, gc, bright, hue, tc);
 }
