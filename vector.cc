@@ -164,7 +164,7 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 
 	for (i = 0; i < e->npoints; i++) {
 		op(e, MOVE_TO, e->points[i].x, e->points[i].y);
-		op(e, LINE_TO, e->points[i].x + 1, e->points[i].y - 1);
+		op(e, LINE_TO, e->points[i].x + 1, e->points[i].y);
 	}
 
 	if (e->cmd_idx >= 0) {
@@ -278,6 +278,9 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, do
 }
 
 void drawPixel(double x, double y, struct graphics *gc, double bright, double hue, struct tilecontext *tc) {
+	x += .5;
+	y += .5;
+
 	double mult = XMAX / gc->width;
 	int xx = x * mult;
 	int yy = y * mult;
@@ -311,5 +314,5 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 }
 
 void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, int gaussian, struct tilecontext *tc) {
-	drawPixel(x, y, gc, bright, hue, tc);
+	drawPixel(x - .5, y - .5, gc, bright, hue, tc);
 }
