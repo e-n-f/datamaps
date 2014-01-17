@@ -148,12 +148,12 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	//////////////////////////////////
 
 	e->layer = e->tile.add_layers();
-	e->layer->set_name("polygons");
+	e->layer->set_name("points");
 	e->layer->set_version(1);
 	e->layer->set_extent(XMAX);
 
 	e->feature = e->layer->add_features();
-	e->feature->set_type(mapnik::vector::tile::Polygon);
+	e->feature->set_type(mapnik::vector::tile::LineString);
 
 	e->x = 0;
 	e->y = 0;
@@ -163,11 +163,8 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->length = 0;
 
 	for (i = 0; i < e->npoints; i++) {
-		op(e, MOVE_TO, e->points[i].x - 1, e->points[i].y);
-		op(e, LINE_TO, e->points[i].x, e->points[i].y - 1);
-		op(e, LINE_TO, e->points[i].x + 1, e->points[i].y);
-		op(e, LINE_TO, e->points[i].x, e->points[i].y + 1);
-		op(e, CLOSE_PATH, 0, 0);
+		op(e, MOVE_TO, e->points[i].x, e->points[i].y);
+		op(e, LINE_TO, e->points[i].x + 1, e->points[i].y - 1);
 	}
 
 	if (e->cmd_idx >= 0) {
@@ -287,17 +284,17 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 
 	// Guarding against rounding error
 
-	if (xx < 1) {
-		xx = 1;
+	if (xx < 0) {
+		xx = 0;
 	}
-	if (xx > XMAX - 2) {
-		xx = XMAX - 2;
+	if (xx > XMAX - 1) {
+		xx = XMAX - 1;
 	}
-	if (yy < 1) {
-		yy = 1;
+	if (yy < 0) {
+		yy = 0;
 	}
-	if (yy > YMAX - 2) {
-		yy = YMAX - 2;
+	if (yy > YMAX - 1) {
+		yy = YMAX - 1;
 	}
 
 	env *e = gc->e;
