@@ -24,10 +24,13 @@ struct point {
 	int y;
 };
 
+#define MAX_POINTS 10000
 struct pointlayer {
 	struct point *points;
 	int npoints;
 	int npalloc;
+
+	struct pointlayer *next;
 };
 
 class env {
@@ -48,7 +51,7 @@ public:
 	int nlalloc;
 
 	struct pointlayer *pointlayers;
-	unsigned char *used;
+	struct pointlayer **used;
 };
 
 #define MOVE_TO 1
@@ -56,14 +59,21 @@ public:
 #define CLOSE_PATH 7
 #define CMD_BITS 3
 
-// because with defaults, 16 overlapping dots reach full brightness
-#define LAYERS 16
-
 struct graphics {
 	int width;
 	int height;
 	env *e;
 };
+
+struct pointlayer *new_pointlayer() {
+	struct pointlayer *p = (struct pointlayer *) malloc(sizeof(struct pointlayer));
+	p->npalloc = 1024;
+	p->npoints = 0;
+	p->points = (struct point *) malloc(p->npalloc * sizeof(struct point));
+	p->next = NULL;
+
+	return p;
+}
 
 struct graphics *graphics_init(int width, int height) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -74,16 +84,11 @@ struct graphics *graphics_init(int width, int height) {
 	e->nlines = 0;
 	e->lines = (struct line *) malloc(e->nlalloc * sizeof(struct line));
 
-	e->pointlayers = (struct pointlayer *) malloc(LAYERS * sizeof(struct pointlayer));
-	e->used = (unsigned char *) malloc(256 * 256 * sizeof(unsigned char));
-	memset(e->used, '\0', 256 * 256 * sizeof(unsigned char));
-
+	e->pointlayers = new_pointlayer();
+	e->used = (struct pointlayer **) malloc(256 * 256 * sizeof(struct pointlayer *));
 	int i;
-	for (i = 0; i < LAYERS; i++) {
-		e->pointlayers[i].npalloc = 1024;
-		e->pointlayers[i].npoints = 0;
-		e->pointlayers[i].points = (struct point *) malloc(e->pointlayers[i].npalloc * sizeof(struct point));
-
+	for (i = 0; i < 256 * 256; i++) {
+		e->used[i] = e->pointlayers;
 	}
 
 	struct graphics *g = (struct graphics *) malloc(sizeof(struct graphics));
@@ -168,9 +173,9 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->layer->set_version(1);
 	e->layer->set_extent(XMAX);
 
-	int j;
-	for (j = 0; j < LAYERS; j++) {
-		if (e->pointlayers[j].npoints != 0) {
+	struct pointlayer *p;
+	for (p = e->pointlayers; p != NULL; p = p->next) {
+		if (p->npoints != 0) {
 			e->feature = e->layer->add_features();
 			e->feature->set_type(mapnik::vector::tile::LineString);
 
@@ -181,9 +186,9 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 			e->cmd = -1;
 			e->length = 0;
 
-			for (i = 0; i < e->pointlayers[j].npoints; i++) {
-				op(e, MOVE_TO, e->pointlayers[j].points[i].x, e->pointlayers[j].points[i].y);
-				op(e, LINE_TO, e->pointlayers[j].points[i].x + 1, e->pointlayers[j].points[i].y);
+			for (i = 0; i < p->npoints; i++) {
+				op(e, MOVE_TO, p->points[i].x, p->points[i].y);
+				op(e, LINE_TO, p->points[i].x + 1, p->points[i].y);
 			}
 
 			if (e->cmd_idx >= 0) {
@@ -338,18 +343,27 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 		yu = 255;
 	}
 
-	int i = e->used[256 * yu + xu] % LAYERS;
-	e->used[256 * yu + xu]++;
+	struct pointlayer *p = e->used[256 * yu + xu];
+	while (p->npoints >= MAX_POINTS) {
+		if (p->next == NULL) {
+			p->next = new_pointlayer();
+		}
+		p = p->next;
+	}
+	if (p->next == NULL) {
+		p->next = new_pointlayer();
+	}
+	e->used[256 * yu + xu] = p->next;
 
-	if (e->pointlayers[i].npoints + 1 >= e->pointlayers[i].npalloc) {
-		e->pointlayers[i].npalloc *= 2;
-		e->pointlayers[i].points = (struct point *) realloc((void *) e->pointlayers[i].points, e->pointlayers[i].npalloc * sizeof(struct point));
+	if (p->npoints + 1 >= p->npalloc) {
+		p->npalloc *= 2;
+		p->points = (struct point *) realloc((void *) p->points, p->npalloc * sizeof(struct point));
 	}
 
-	e->pointlayers[i].points[e->pointlayers[i].npoints].x = xx;
-	e->pointlayers[i].points[e->pointlayers[i].npoints].y = yy;
+	p->points[p->npoints].x = xx;
+	p->points[p->npoints].y = yy;
 
-	e->pointlayers[i].npoints++;
+	p->npoints++;
 }
 
 void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, int gaussian, struct tilecontext *tc) {
