@@ -397,6 +397,7 @@ int main(int argc, char **argv) {
 	int saturate = 1;
 	int mask = 0;
 	char *outdir = NULL;
+	int vector_styles = 0;
 
 	colors.active = 0;
 
@@ -411,7 +412,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:aAwc:l:L:smf:S:T:o:x:e:p:")) != -1) {
+	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:aAwc:l:L:smf:S:T:o:x:e:p:v")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -564,10 +565,62 @@ int main(int argc, char **argv) {
 			}
 			break;
 
+		case 'v':
+			vector_styles = 1;
+			break;
+
 		default:
 			fprintf(stderr, "Unknown option %c\n", i);
 			usage(argv);
 		}
+	}
+
+	if (vector_styles) {
+		printf("Map {\n");
+		if (invert) {
+			printf("  background-color: rgba(255,255,255,%.3f);\n", transparency / 255.0);
+		} else {
+			printf("  background-color: rgba(0,0,0,%.3f);\n", transparency / 255.0);
+		}
+		printf("}\n\n");
+
+		printf("#points {\n");
+		if (invert) {
+			printf("  line-color: #000000;\n");
+		} else {
+			printf("  line-color: #FFFFFF;\n");
+		}
+		printf("  line-cap: round;\n");
+		printf("  line-width: %.3f;\n", 2 * sqrt(1 / M_PI)); // diameter of circle with area 1
+
+		// steps to get to full brightness with dot_bright
+		double steps = 1.0 / dot_bright;
+		// steps to get to half brightness, taking gamma into account
+		double halfsteps = steps * exp(log(.5) / display_gamma);
+		// alpha to get to half brightness with same number of steps
+		double alpha = 1 - exp(log(.5) / halfsteps);
+		printf("  line-opacity: %.3f;\n", alpha);
+		printf("\n");
+
+		int i;
+		for (i = dot_base + 1; i < 23; i++) {
+			printf("  [zoom >= %d] {", i);
+
+			// area doubles with each zoom
+			printf(" line-width: %7.3f;", 2 * sqrt((1 << (i - dot_base)) / M_PI));
+
+			// dot brightness increases by ramp with each zoom
+			double steps = 1.0 / (dot_bright * exp(log(dot_ramp) * (i - dot_base)));
+			double halfsteps = steps * exp(log(.5) / display_gamma);
+			double alpha = 1 - exp(log(.5) / halfsteps);
+
+			printf(" line-opacity: %7.3f;", alpha);
+			printf(" }\n");
+		}
+
+		printf("}\n");
+
+		return EXIT_SUCCESS;
 	}
 
 	if (assemble) {
