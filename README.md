@@ -275,6 +275,17 @@ and smaller at latitudes closer to the equator.</dd>
 
 </dl>
 
+Vector styling
+--------------
+
+<dl>
+<dt>-v</dt>
+<dd>Instead of the normal output, produce a CartoCSS file for TileMill 2
+to approximate the brightness, dot ramp, gamma, and colors you specified.
+Use render-vector to make the vector tiles themselves.</dd>
+
+</dl>
+
 Useless
 -------
 
