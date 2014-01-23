@@ -593,6 +593,37 @@ int main(int argc, char **argv) {
 		printf("  line-cap: round;\n");
 		printf("  line-width: %.3f;\n", 2 * sqrt(1 / M_PI)); // diameter of circle with area 1
 
+		if (color != -1 || color2 != -1) {
+			int r1 = (color >> 16)  & 0xFF;
+			int g1 = (color >> 8)   & 0xFF;
+			int b1 = (color)        & 0xFF;
+
+			int r2 = (color2 >> 16) & 0xFF;
+			int g2 = (color2 >> 8)  & 0xFF;
+			int b2 = (color2)       & 0xFF;
+
+			if (color == -1) {
+				r1 = g1 = b1 = 128;
+			}
+			if (color2 == -1) {
+				if (invert) {
+					r2 = g2 = b2 = 0;
+				} else {
+					r2 = g2 = b2 = 255;
+				}
+			}
+
+			// Color 1 is repeated so the bottom half of the range
+			// all has that hue. The middle will only have half
+			// alpha instead of fully reaching the middle color
+			// as intended.
+
+			printf("  image-filters: colorize-alpha(");
+			printf("#%02X%02X%02X, ", r1, g1, b1);
+			printf("#%02X%02X%02X, ", r1, g1, b1);
+			printf("#%02X%02X%02X);\n", r2, g2, b2);
+		}
+
 		// steps to get to full brightness with dot_bright
 		double steps = 1.0 / dot_bright;
 		// steps to get to half brightness, taking gamma into account
