@@ -151,6 +151,9 @@ Output file format
 <dt>-T <i>pixels</i></dt>
 <dd>Image tiles are <i>pixels</i> pixels on a side. The default is 256. 512 is useful for high-res "retina" displays.</dd>
 
+<dt>-r</i></dt>
+<dd>Leaflet-style retina, where a request for a tile at zoom level N is actually a request for a quarter of a tile at zoom level N-1. In this case, the quarter-tiles remain 256x256.</dd>
+
 <dt>-o <i>dir</i></dt>
 <dd>Instead of outputting the PNG image to the standard output, write it in a file in the directory <i>dir</i> in the zoom/x/y hierarchy.</dd>
 </dl>

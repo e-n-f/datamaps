@@ -398,6 +398,7 @@ int main(int argc, char **argv) {
 	int mask = 0;
 	char *outdir = NULL;
 	int vector_styles = 0;
+	int leaflet_retina = 0;
 
 	colors.active = 0;
 
@@ -412,7 +413,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:aAwc:l:L:smf:S:T:o:x:e:p:v")) != -1) {
+	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:aAwc:l:L:smf:S:T:o:x:e:p:vr")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -567,6 +568,10 @@ int main(int argc, char **argv) {
 
 		case 'v':
 			vector_styles = 1;
+			break;
+
+		case 'r':
+			leaflet_retina = 1;
 			break;
 
 		default:
@@ -749,8 +754,29 @@ int main(int argc, char **argv) {
 		unsigned int x_draw = atoi(argv[optind + 2]);
 		unsigned int y_draw = atoi(argv[optind + 3]);
 
+		unsigned int x_draw_render = x_draw;
+		unsigned int y_draw_render = y_draw;
+		unsigned int z_draw_render = z_draw;
+		int xoff = 0;
+		int yoff = 0;
+
+		if (leaflet_retina && z_draw > 0) {
+			if (x_draw % 2 != 0) {
+				xoff -= tilesize;
+			}
+			if (y_draw % 2 != 0) {
+				yoff -= tilesize;
+			}
+
+			x_draw_render /= 2;
+			y_draw_render /= 2;
+			z_draw_render--;
+
+			tilesize *= 2;
+		}
+
 		for (i = 0; i < nfiles; i++) {
-			do_tile(gc, z_draw, x_draw, y_draw, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, 0, 0);
+			do_tile(gc, z_draw_render, x_draw_render, y_draw_render, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, xoff, yoff);
 		}
 
 		if (!dump) {
