@@ -639,11 +639,19 @@ int main(int argc, char **argv) {
 		printf("\n");
 
 		int i;
-		for (i = dot_base + 1; i < 23; i++) {
-			printf("  [zoom >= %d] {", i);
+		for (i = 0; i <= dot_base; i++) {
+			printf("  [zoom >= %2d] {", i);
 
-			// area doubles with each zoom
-			printf(" line-width: %7.3f;", 2 * sqrt((1 << (i - dot_base)) / M_PI));
+			// dot brightness decreases by ramp with each zoom
+			double steps = 1.0 / (dot_bright * exp(log(dot_ramp) * (i - dot_base)));
+			double halfsteps = steps * exp(log(.5) / display_gamma);
+			double alpha = 1 - exp(log(.5) / halfsteps);
+
+			printf(" line-opacity: %7.3f;", alpha);
+			printf(" }\n");
+		}
+		for (i = dot_base + 1; i < 23; i++) {
+			printf("  [zoom >= %2d] {", i);
 
 			// dot brightness increases by ramp with each zoom
 			double steps = 1.0 / (dot_bright * exp(log(dot_ramp) * (i - dot_base)));
@@ -651,6 +659,9 @@ int main(int argc, char **argv) {
 			double alpha = 1 - exp(log(.5) / halfsteps);
 
 			printf(" line-opacity: %7.3f;", alpha);
+
+			// area doubles with each zoom
+			printf(" line-width: %7.3f;", 2 * sqrt((1 << (i - dot_base)) / M_PI));
 			printf(" }\n");
 		}
 
