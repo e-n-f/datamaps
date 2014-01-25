@@ -41,7 +41,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 		int n = 0, m = 0;
 
 		if (seq % 100000 == 0) {
-			fprintf(stderr, "Read %lld records\r", seq);
+			fprintf(stderr, "Read %.1f million records\r", seq / 1000000.0);
 		}
 		seq++;
 
@@ -382,6 +382,8 @@ int main(int argc, char **argv) {
 		fclose(f);
 		close(fd);
 	}
+
+	fprintf(stderr, "\n");
 
 	return 0;
 }
