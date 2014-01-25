@@ -52,7 +52,12 @@ earth instead of just one tile, you can do
 The bounds of the image will be rounded up to tile boundaries for
 the zoom level you specified.  The "--" is because otherwise
 <code>getopt</code> will complain about negative numbers in
-the latitudes or longitudes.
+the latitudes or longitudes.  For example you could use
+
+    ./render -A -- dots.dm 12 37.192596 -122.811526 38.070528 -121.702961 > sf.png
+
+to generate an image of the San Francisco Bay Area at zoom level 12
+from the encoded data in dots.dm.
 
 The point indexing is inspired by Brandon Martin-Anderson's
 <a href="http://bmander.com/dotmap/index.html#13.00/37.7733/-122.4265">
