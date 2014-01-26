@@ -711,36 +711,47 @@ int main(int argc, char **argv) {
 	}
 
 	if (assemble) {
-		unsigned x1, y1, x2, y2;
+		unsigned wx1, wy1, wx2, wy2;
 
-		latlon2tile(atof(argv[optind + 2]), atof(argv[optind + 3]), z_draw, &x1, &y1);
-		latlon2tile(atof(argv[optind + 4]), atof(argv[optind + 5]), z_draw, &x2, &y2);
+		latlon2tile(atof(argv[optind + 2]), atof(argv[optind + 3]), 32, &wx1, &wy1);
+		latlon2tile(atof(argv[optind + 4]), atof(argv[optind + 5]), 32, &wx2, &wy2);
 
-		if (x1 > x2) {
-			unsigned t = x2;
-			x2 = x1;
-			x1 = t;
+		if (wx1 > wx2) {
+			unsigned t = wx2;
+			wx2 = wx1;
+			wx1 = t;
 		}
 
-		if (y1 > y2) {
-			unsigned t = y2;
-			y2 = y1;
-			y1 = t;
+		if (wy1 > wy2) {
+			unsigned t = wy2;
+			wy2 = wy1;
+			wy1 = t;
 		}
+
+		double fx1, fy1, fx2, fy2;
+
+		unsigned x1 = (long long) wx1 >> (32 - z_draw);
+		unsigned y1 = (long long) wy1 >> (32 - z_draw);
+
+		unsigned x2 = (long long) wx2 >> (32 - z_draw);
+		unsigned y2 = (long long) wy2 >> (32 - z_draw);
+
+		wxy2fxy(wx1, wy1, &fx1, &fy1, z_draw, x1, y1);
+		wxy2fxy(wx2, wy2, &fx2, &fy2, z_draw, x2, y2);
 
 		fprintf(stderr, "making zoom %u: %u/%u to %u/%u\n", z_draw, x1, y1, x2, y2);
-		fprintf(stderr, "that's %d by %d\n", tilesize * (x2 - x1 + 1), tilesize * (y2 - y1 + 1));
+		fprintf(stderr, "that's %f by %f\n", tilesize * (x2 - x1 + fx2 - fx1), tilesize * (y2 - y1 + fy2 - fy1));
 
-		int stride = (x2 - x1 + 1) * tilesize;
+		double stride = (x2 - x1 + fx2 - fx1) * tilesize;
 		struct graphics *gc = NULL;
 
 		if (!dump) {
-			if (stride * (y2 - y1 + 1) * tilesize > 10000 * 10000) {
+			if (stride * (y2 - y1 + fy2 - fy1) * tilesize > 10000 * 10000) {
 				fprintf(stderr, "Image too big\n");
 				exit(EXIT_FAILURE);
 			}
 
-			gc = graphics_init((x2 - x1 + 1) * tilesize, (y2 - y1 + 1) * tilesize);
+			gc = graphics_init((x2 - x1 + fx2 - fx1) * tilesize, (y2 - y1 + fy2 - fy1) * tilesize);
 		}
 
 		unsigned int x, y;
@@ -749,13 +760,13 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
 
 				for (i = 0; i < nfiles; i++) {
-					do_tile(gc, z_draw, x, y, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1) * tilesize, (y - y1) * tilesize);
+					do_tile(gc, z_draw, x, y, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize);
 				}
 			}
 		}
 
 		if (!dump) {
-			fprintf(stderr, "output: %d by %d\n", tilesize * (x2 - x1 + 1), tilesize * (y2 - y1 + 1));
+			fprintf(stderr, "output: %d by %d\n", (int) (tilesize * (x2 - x1 + fx2 - fx1)), (int) (tilesize * (y2 - y1 + fy2 - fy1)));
 			prep(outdir, z_draw, x1, y1);
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}

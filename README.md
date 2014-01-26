@@ -49,8 +49,7 @@ earth instead of just one tile, you can do
 
     ./render -A -- directoryname zoom minlat minlon maxlat maxlon > foo.png
 
-The bounds of the image will be rounded up to tile boundaries for
-the zoom level you specified.  The "--" is because otherwise
+The "--" is because otherwise
 <code>getopt</code> will complain about negative numbers in
 the latitudes or longitudes.  For example you could use
 
@@ -136,7 +135,7 @@ to render the specified tile into a PNG file on the standard output.
 <dl>
 <dt>-A ... <i>dir zoom minlat minlon maxlat maxlon</i></dt>
 <dd>Instead of rendering a single tile (zoom/x/y), the invocation format changes
-to render the set of tiles covering the specified bounding box as a single image.</dd>
+to render the specified bounding box as a single image.</dd>
 
 <dt>-f <i>dir</i></dt>
 <dd>Also read input from <i>dir</i> in addition to the file in the main arguments.
