@@ -80,7 +80,7 @@ for example,
     $ enumerate -z14 dirname | xargs -L1 -P8 ./render -o tiles/dirname
 
 <code>enumerate</code> will output a list of all the zoom/x/y
-combinations that appear in <code>dirname</code> through zoom 18,
+combinations that appear in <code>dirname</code> through zoom 14,
 and <code>xargs</code> will invoke <code>render</code> on each
 of these to generate the tiles into <code>tiles/dirname</code>.
 
