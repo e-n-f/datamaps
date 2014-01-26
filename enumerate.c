@@ -268,6 +268,10 @@ int main(int argc, char **argv) {
 
 	struct tile tile[maxzoom + 1];
 
+	long long size_total = 0;
+	long long size_read = 0;
+	int size_progress = -1;
+
 	for (i = 0; i <= maxzoom; i++) {
 		tile[i].xtile = tile[i].ytile = -1;
 		tile[i].count = 0;
@@ -297,8 +301,15 @@ int main(int argc, char **argv) {
 				files[nfiles]->bytes = bytesfor(mapbits, metabits, i, z_lookup);
 				files[nfiles]->buf = malloc(files[nfiles]->bytes);
 
+				struct stat st;
+				if (stat(fn, &st) == 0) {
+					size_total += st.st_size;
+				}
+
 				if (fread(files[nfiles]->buf, files[nfiles]->bytes, 1, files[nfiles]->f) != 1) {
 					memset(files[nfiles]->buf, 0xFF, bytes);
+				} else {
+					size_read += files[nfiles]->bytes;
 				}
 
 				nfiles++;
@@ -338,6 +349,13 @@ int main(int argc, char **argv) {
 
 		if (fread(files[0]->buf, files[0]->bytes, 1, files[0]->f) != 1) {
 			memset(files[0]->buf, 0xFF, bytes);
+		} else {
+			size_read += files[0]->bytes;
+
+			if (100 * size_read / size_total != size_progress) {
+				fprintf(stderr, "enumerate: %lld%% \r", 100 * size_read / size_total);
+				size_progress = 100 * size_read / size_total;
+			}
 		}
 	}
 
