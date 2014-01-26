@@ -48,7 +48,7 @@ struct color_range {
 	int active;
 };
 
-void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, struct color_range *colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff);
+void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, struct color_range *colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff, int assemble);
 
 static double cloudsize(int z_draw, int x_draw, int y_draw) {
 	double lat, lon;
@@ -760,7 +760,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
 
 				for (i = 0; i < nfiles; i++) {
-					do_tile(gc, z_draw, x, y, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize);
+					do_tile(gc, z_draw, x, y, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize, assemble);
 				}
 			}
 		}
@@ -798,7 +798,7 @@ int main(int argc, char **argv) {
 		}
 
 		for (i = 0; i < nfiles; i++) {
-			do_tile(gc, z_draw_render, x_draw_render, y_draw_render, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, xoff, yoff);
+			do_tile(gc, z_draw_render, x_draw_render, y_draw_render, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, xoff, yoff, assemble);
 		}
 
 		if (!dump) {
@@ -816,7 +816,7 @@ int main(int argc, char **argv) {
 
 void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw,
 		int bytes, struct color_range *colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass,
-		int xoff, int yoff) {
+		int xoff, int yoff, int assemble) {
 	int i;
 
 	// Do the single-point case
@@ -829,7 +829,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 	// When overzoomed, also look up the adjacent tile
 	// to keep from drawing partial circles.
 
-	if ((further || circle > 0) && !dump) {
+	if ((further || circle > 0) && !dump && !assemble) {
 		int above = 1;
 		int below = 1;
 
