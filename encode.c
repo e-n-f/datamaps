@@ -346,7 +346,7 @@ int main(int argc, char **argv) {
 			// write out intermediate stages of the sort.
 
 			void *map2 = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_SHARED, fd, start);
-			if (map == MAP_FAILED) {
+			if (map2 == MAP_FAILED) {
 				perror("mmap (write)");
 				exit(EXIT_FAILURE);
 			}
