@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 #include "util.h"
 #include "graphics.h"
 #include "dump.h"
@@ -44,10 +45,10 @@ struct tile {
 };
 
 struct bounds {
-	double minlat;
-	double minlon;
-	double maxlat;
-	double maxlon;
+	unsigned int left;
+	unsigned int top;
+	unsigned int right;
+	unsigned int bottom;
 };
 
 void handle(long long xx, long long yy, struct tile *tile, char *fname, int minzoom, int maxzoom, int showdist, unsigned int *x, unsigned int *y, struct file **files, int sibling, int verbose, struct bounds *bounds) {
@@ -127,10 +128,8 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 		if (bounds == NULL) {
 			include = 1;
 		} else {
-			double lat, lon;
-			tile2latlon(xx, yy, 32, &lat, &lon);
-			if (lat >= bounds->minlat && lat <= bounds->maxlat &&
-			    lon >= bounds->minlon && lon <= bounds->maxlon) {
+			if (xx >= bounds->left && xx <= bounds->right &&
+			    yy >= bounds->top && yy <= bounds->bottom) {
 				include = 1;
 			}
 		}
@@ -185,10 +184,10 @@ int main(int argc, char **argv) {
 	int usebounds = 0;
 
 	struct bounds bounds;
-	bounds.minlat = -90;
-	bounds.minlon = -180;
-	bounds.maxlat = 90;
-	bounds.maxlon = 180;
+	bounds.top = 0;
+	bounds.left = 0;
+	bounds.bottom = UINT_MAX;
+	bounds.right = UINT_MAX;
 
 	while ((i = getopt(argc, argv, "z:Z:aDdsvb:")) != -1) {
 		switch (i) {
@@ -217,11 +216,18 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'b':
-			if (sscanf(optarg, "%lf,%lf,%lf,%lf", &bounds.minlat, &bounds.minlon,
-					&bounds.maxlat, &bounds.maxlon) != 4) {
-				usage(argv);
+			{
+				double minlat, minlon, maxlat, maxlon;
+
+				if (sscanf(optarg, "%lf,%lf,%lf,%lf", &minlat, &minlon,
+						&maxlat, &maxlon) != 4) {
+					usage(argv);
+				}
+
+				latlon2tile(minlat, minlon, 32, &bounds.left, &bounds.bottom);
+				latlon2tile(maxlat, maxlon, 32, &bounds.right, &bounds.top);
+				usebounds = 1;
 			}
-			usebounds = 1;
 			break;
 
 		case 'v':
