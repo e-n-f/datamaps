@@ -16,6 +16,9 @@ struct file {
 	int zoom;
 	int bytes;
 	unsigned char *buf;
+	int done;
+
+	struct file *next;
 };
 
 void usage(char **argv) {
@@ -159,6 +162,15 @@ void handle(long long xx, long long yy, struct tile *tile, char *fname, int minz
 	}
 }
 
+void insert(struct file *m, struct file **head, int bytes) {
+	while (*head != NULL && memcmp(m->buf, (*head)->buf, bytes) > 0) {
+		head = &((*head)->next);
+	}
+
+	m->next = *head;
+	*head = m;
+}
+
 int main(int argc, char **argv) {
 	int i;
 	extern int optind;
@@ -300,6 +312,7 @@ int main(int argc, char **argv) {
 				files[nfiles]->zoom = z_lookup;
 				files[nfiles]->bytes = bytesfor(mapbits, metabits, i, z_lookup);
 				files[nfiles]->buf = malloc(files[nfiles]->bytes);
+				files[nfiles]->done = 0;
 
 				struct stat st;
 				if (stat(fn, &st) == 0) {
@@ -308,6 +321,7 @@ int main(int argc, char **argv) {
 
 				if (fread(files[nfiles]->buf, files[nfiles]->bytes, 1, files[nfiles]->f) != 1) {
 					memset(files[nfiles]->buf, 0xFF, bytes);
+					files[nfiles]->done = 1;
 				} else {
 					size_read += files[nfiles]->bytes;
 				}
@@ -321,25 +335,26 @@ int main(int argc, char **argv) {
 		dump_begin(all);
 	}
 
-	while (1) {
-		qsort(files, nfiles, sizeof(struct file *), filecmp);
-
-		if (memcmp(files[0]->buf, eof, bytes) == 0) {
-			break;
+	struct file *head = NULL;
+	for (i = 0; i < nfiles; i++) {
+		if (!files[i]->done) {
+			insert(files[i], &head, bytes);
 		}
+	}
 
+	while (head != NULL) {
 		// The problem with this is that only the first component of
 		// each vector is indexed. We actually want all the tiles that
 		// the vector intersects, and could queue those by doing
 		// line drawing, except that the first component might not
 		// actually have the lowest tile number. How to fix?
 
-		unsigned int x[files[0]->components], y[files[0]->components];
+		unsigned int x[head->components], y[head->components];
 		unsigned long long meta = 0;
-		buf2xys(files[0]->buf, mapbits, metabits, files[0]->zoom, files[0]->components, x, y, &meta);
+		buf2xys(head->buf, mapbits, metabits, head->zoom, head->components, x, y, &meta);
 
 		if (all) {
-			dump_out(all, x, y, files[0]->components, metabits, meta);
+			dump_out(all, x, y, head->components, metabits, meta);
 		} else {
 			long long xx = x[0], yy = y[0];
 
@@ -347,10 +362,19 @@ int main(int argc, char **argv) {
 			       usebounds ? &bounds : NULL);
 		}
 
-		if (fread(files[0]->buf, files[0]->bytes, 1, files[0]->f) != 1) {
-			memset(files[0]->buf, 0xFF, bytes);
+		if (fread(head->buf, head->bytes, 1, head->f) != 1) {
+			memset(head->buf, 0xFF, bytes);
+			head->done = 1;
+
+			head = head->next;
 		} else {
-			size_read += files[0]->bytes;
+			size_read += head->bytes;
+
+			struct file *m = head;
+			head = m->next;
+			m->next = NULL;
+
+			insert(m, &head, bytes);
 
 			if (100 * size_read / size_total != size_progress) {
 				fprintf(stderr, "enumerate: %lld%% \r", 100 * size_read / size_total);
