@@ -33,6 +33,15 @@ struct pointlayer {
 	struct pointlayer *next;
 };
 
+struct linelayer {
+	struct line *lines;
+	int nlines;
+	int nlalloc;
+	unsigned char *used;
+
+	struct linelayer *next;
+};
+
 class env {
 public:
 	mapnik::vector::tile tile;
@@ -46,9 +55,7 @@ public:
 	int cmd;
 	int length;
 
-	struct line *lines;
-	int nlines;
-	int nlalloc;
+	struct linelayer *linelayers;
 
 	struct pointlayer *pointlayers;
 	struct pointlayer **used;
@@ -75,15 +82,23 @@ struct pointlayer *new_pointlayer() {
 	return p;
 }
 
+struct linelayer *new_linelayer() {
+	struct linelayer *l = (struct linelayer *) malloc(sizeof(struct linelayer));
+	l->nlalloc = 1024;
+	l->nlines = 0;
+	l->lines = (struct line *) malloc(l->nlalloc * sizeof(struct line));
+	l->next = NULL;
+	l->used = (unsigned char *) malloc(256 * 256 * sizeof(unsigned char));
+
+	return l;
+}
+
 struct graphics *graphics_init(int width, int height) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	env *e = new env;
 
-	e->nlalloc = 1024;
-	e->nlines = 0;
-	e->lines = (struct line *) malloc(e->nlalloc * sizeof(struct line));
-
+	e->linelayers = new_linelayer();
 	e->pointlayers = new_pointlayer();
 	e->used = (struct pointlayer **) malloc(256 * 256 * sizeof(struct pointlayer *));
 	int i;
@@ -132,38 +147,41 @@ static void op(env *e, int cmd, int x, int y);
 
 void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
 	env *e = gc->e;
+	int i;
 
 	e->layer = e->tile.add_layers();
 	e->layer->set_name("lines");
 	e->layer->set_version(1);
 	e->layer->set_extent(XMAX);
 
-	e->feature = e->layer->add_features();
-	e->feature->set_type(mapnik::vector::tile::LineString);
+	struct linelayer *l;
+	for (l = e->linelayers; l != NULL; l = l->next){
+		e->feature = e->layer->add_features();
+		e->feature->set_type(mapnik::vector::tile::LineString);
 
-	e->x = 0;
-	e->y = 0;
+		e->x = 0;
+		e->y = 0;
 
-	e->cmd_idx = -1;
-	e->cmd = -1;
-	e->length = 0;
+		e->cmd_idx = -1;
+		e->cmd = -1;
+		e->length = 0;
 
-	int i;
-	for (i = 0; i < e->nlines; i++) {
-		// printf("draw %d %d to %d %d\n", e->lines[i].x0, e->lines[i].y0, e->lines[i].x1, e->lines[i].y1);
+		for (i = 0; i < l->nlines; i++) {
+			// printf("draw %d %d to %d %d\n", e->lines[i].x0, e->lines[i].y0, e->lines[i].x1, e->lines[i].y1);
 
-		if (e->lines[i].x0 != e->x || e->lines[i].y0 != e->y || e->length == 0) {
-			op(e, MOVE_TO, e->lines[i].x0, e->lines[i].y0);
+			if (l->lines[i].x0 != e->x || l->lines[i].y0 != e->y || e->length == 0) {
+				op(e, MOVE_TO, l->lines[i].x0, l->lines[i].y0);
+			}
+
+			op(e, LINE_TO, l->lines[i].x1, l->lines[i].y1);
 		}
 
-		op(e, LINE_TO, e->lines[i].x1, e->lines[i].y1);
-	}
-
-	if (e->cmd_idx >= 0) {
-		//printf("old command: %d %d\n", e->cmd, e->length);
-		e->feature->set_geometry(e->cmd_idx, 
-			(e->length << CMD_BITS) |
-			(e->cmd & ((1 << CMD_BITS) - 1)));
+		if (e->cmd_idx >= 0) {
+			//printf("old command: %d %d\n", e->cmd, e->length);
+			e->feature->set_geometry(e->cmd_idx, 
+				(e->length << CMD_BITS) |
+				(e->cmd & ((1 << CMD_BITS) - 1)));
+		}
 	}
 
 	//////////////////////////////////
@@ -245,6 +263,64 @@ static void op(env *e, int cmd, int x, int y) {
 	}
 }
 
+// http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
+int lineused(struct linelayer *l, int x0, int y0, int x1, int y1) {
+	int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
+	int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
+	int err = ((dx > dy) ? dx : -dy) / 2, e2;
+
+	while (1) {
+		if (x0 == x1 && y0 == y1) {
+			break;
+		}
+
+		if (x0 >= 0 && y0 >=0 && x0 < 256 && y0 < 256) {
+			if (l->used[y0 * 256 + x0]) {
+				return 1;
+			}
+		}
+
+		e2 = err;
+		if (e2 > -dx) {
+			err -= dy;
+			x0 += sx;
+		}
+		if (e2 <  dy) {
+			err += dx;
+			y0 += sy;
+		}
+	}
+
+	return 0;
+}
+
+// http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
+void useline(struct linelayer *l, int x0, int y0, int x1, int y1) {
+	int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
+	int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
+	int err = ((dx > dy) ? dx : -dy) / 2, e2;
+
+	while (1) {
+		if (x0 == x1 && y0 == y1) {
+			break;
+		}
+
+		if (x0 >= 0 && y0 >=0 && x0 < 256 && y0 < 256) {
+			l->used[y0 * 256 + x0] = 1;
+		}
+
+		e2 = err;
+		if (e2 > -dx) {
+			err -= dy;
+			x0 += sx;
+		}
+		if (e2 <  dy) {
+			err += dx;
+			y0 += sy;
+		}
+	}
+}
+
 int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, int antialias, double thick, struct tilecontext *tc) {
 	double mult = XMAX / gc->width;
 	int accept = clip(&x0, &y0, &x1, &y1, 0, 0, XMAX / mult, YMAX / mult);
@@ -284,19 +360,29 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, do
 		}
 
 		env *e = gc->e;
+		struct linelayer *l = e->linelayers;
 
 		if (xx0 != xx1 || yy0 != yy1) {
-			if (e->nlines + 1 >= e->nlalloc) {
-				e->nlalloc *= 2;
-				e->lines = (struct line *) realloc((void *) e->lines, e->nlalloc * sizeof(struct line));
+			while (l->nlines > MAX_POINTS || lineused(l, x0, y0, x1, y1)) {
+				if (l->next == NULL) {
+					l->next = new_linelayer();
+				}
+				l = l->next;
 			}
 
-			e->lines[e->nlines].x0 = xx0;
-			e->lines[e->nlines].y0 = yy0;
-			e->lines[e->nlines].x1 = xx1;
-			e->lines[e->nlines].y1 = yy1;
+			if (l->nlines + 1 >= l->nlalloc) {
+				l->nlalloc *= 2;
+				l->lines = (struct line *) realloc((void *) l->lines, l->nlalloc * sizeof(struct line));
+			}
 
-			e->nlines++;
+			useline(l, x0, y0, x1, y1);
+
+			l->lines[l->nlines].x0 = xx0;
+			l->lines[l->nlines].y0 = yy0;
+			l->lines[l->nlines].x1 = xx1;
+			l->lines[l->nlines].y1 = yy1;
+
+			l->nlines++;
 		}
 	}
 
