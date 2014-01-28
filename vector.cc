@@ -323,41 +323,13 @@ void useline(struct linelayer *l, int x0, int y0, int x1, int y1) {
 
 int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, int antialias, double thick, struct tilecontext *tc) {
 	double mult = XMAX / gc->width;
-	int accept = clip(&x0, &y0, &x1, &y1, 0, 0, XMAX / mult, YMAX / mult);
+	int accept = clip(&x0, &y0, &x1, &y1, -1, -1, XMAX / mult + 1, YMAX / mult + 1);
 
 	if (accept) {
 		int xx0 = x0 * mult;
 		int yy0 = y0 * mult;
 		int xx1 = x1 * mult;
 		int yy1 = y1 * mult;
-
-		// Guarding against rounding error
-
-		if (xx0 < 0) {
-			xx0 = 0;
-		}
-		if (xx0 > XMAX - 1) {
-			xx0 = XMAX - 1;
-		}
-		if (yy0 < 0) {
-			yy0 = 0;
-		}
-		if (yy0 > YMAX - 1) {
-			yy0 = YMAX - 1;
-		}
-
-		if (xx1 < 0) {
-			xx1 = 0;
-		}
-		if (xx1 > XMAX - 1) {
-			xx1 = XMAX - 1;
-		}
-		if (yy1 < 0) {
-			yy1 = 0;
-		}
-		if (yy1 > YMAX - 1) {
-			yy1 = YMAX - 1;
-		}
 
 		env *e = gc->e;
 		struct linelayer *l = e->linelayers;
@@ -396,21 +368,6 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 	double mult = XMAX / gc->width;
 	int xx = x * mult;
 	int yy = y * mult;
-
-	// Guarding against rounding error
-
-	if (xx < 0) {
-		xx = 0;
-	}
-	if (xx > XMAX - 1) {
-		xx = XMAX - 1;
-	}
-	if (yy < 0) {
-		yy = 0;
-	}
-	if (yy > YMAX - 1) {
-		yy = YMAX - 1;
-	}
 
 	env *e = gc->e;
 
