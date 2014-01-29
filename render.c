@@ -123,8 +123,9 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			brush = exp(log(2.0) * (z_draw - dot_base));
 			bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
 		} else {
-			step = exp(log(exponent) * (dot_base - z_draw));
-			bright1 *= exp(log(dot_ramp * 2.0 / exponent) * (z_draw - dot_base));
+			step = floor(exp(log(exponent) * (dot_base - z_draw)) + .5);
+			bright1 *= exp(log(dot_ramp) * (z_draw - dot_base));
+			bright1 = bright1 * step / (1 << (dot_base - z_draw));
 		}
 
 		bright1 /= point_size;
@@ -553,6 +554,10 @@ int main(int argc, char **argv) {
 		case 'e':
 			if (sscanf(optarg, "%lf", &exponent) != 1) {
 				fprintf(stderr, "Can't understand -%c %s\n", i, optarg);
+				usage(argv);
+			}
+			if (exponent < 1) {
+				fprintf(stderr, "Exponent can't be less than 1: %f\n", exponent);
 				usage(argv);
 			}
 			break;
