@@ -33,6 +33,14 @@ struct pointlayer {
 	struct pointlayer *next;
 };
 
+struct metapointlayer {
+	struct pointlayer *pointlayers;
+	struct pointlayer **used;
+
+	long long meta;
+	struct metapointlayer *next;
+};
+
 struct linelayer {
 	struct line *lines;
 	int nlines;
@@ -57,8 +65,7 @@ public:
 
 	struct linelayer *linelayers;
 
-	struct pointlayer *pointlayers;
-	struct pointlayer **used;
+	struct metapointlayer *metapointlayers;
 };
 
 #define MOVE_TO 1
@@ -82,6 +89,21 @@ struct pointlayer *new_pointlayer() {
 	return p;
 }
 
+struct metapointlayer *new_metapointlayer(long long meta, struct metapointlayer *next) {
+	struct metapointlayer *mpl = (struct metapointlayer *) malloc(sizeof(struct metapointlayer));
+	mpl->pointlayers = new_pointlayer();
+	mpl->meta = meta;
+	mpl->next = next;
+
+	mpl->used = (struct pointlayer **) malloc(256 * 256 * sizeof(struct pointlayer *));
+	int i;
+	for (i = 0; i < 256 * 256; i++) {
+		mpl->used[i] = mpl->pointlayers;
+	}
+
+	return mpl;
+}
+
 struct linelayer *new_linelayer() {
 	struct linelayer *l = (struct linelayer *) malloc(sizeof(struct linelayer));
 	l->nlalloc = 1024;
@@ -99,12 +121,7 @@ struct graphics *graphics_init(int width, int height) {
 	env *e = new env;
 
 	e->linelayers = new_linelayer();
-	e->pointlayers = new_pointlayer();
-	e->used = (struct pointlayer **) malloc(256 * 256 * sizeof(struct pointlayer *));
-	int i;
-	for (i = 0; i < 256 * 256; i++) {
-		e->used[i] = e->pointlayers;
-	}
+	e->metapointlayers = NULL;
 
 	struct graphics *g = (struct graphics *) malloc(sizeof(struct graphics));
 	g->e = e;
@@ -191,28 +208,31 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->layer->set_version(1);
 	e->layer->set_extent(XMAX);
 
-	struct pointlayer *p;
-	for (p = e->pointlayers; p != NULL; p = p->next) {
-		if (p->npoints != 0) {
-			e->feature = e->layer->add_features();
-			e->feature->set_type(mapnik::vector::tile::LineString);
+	struct metapointlayer *mpl;
+	for (mpl = e->metapointlayers; mpl != NULL; mpl = mpl->next) {
+		struct pointlayer *p;
+		for (p = mpl->pointlayers; p != NULL; p = p->next) {
+			if (p->npoints != 0) {
+				e->feature = e->layer->add_features();
+				e->feature->set_type(mapnik::vector::tile::LineString);
 
-			e->x = 0;
-			e->y = 0;
+				e->x = 0;
+				e->y = 0;
 
-			e->cmd_idx = -1;
-			e->cmd = -1;
-			e->length = 0;
+				e->cmd_idx = -1;
+				e->cmd = -1;
+				e->length = 0;
 
-			for (i = 0; i < p->npoints; i++) {
-				op(e, MOVE_TO, p->points[i].x, p->points[i].y);
-				op(e, LINE_TO, p->points[i].x + 1, p->points[i].y);
-			}
+				for (i = 0; i < p->npoints; i++) {
+					op(e, MOVE_TO, p->points[i].x, p->points[i].y);
+					op(e, LINE_TO, p->points[i].x, p->points[i].y);
+				}
 
-			if (e->cmd_idx >= 0) {
-				e->feature->set_geometry(e->cmd_idx, 
-					(e->length << CMD_BITS) |
-					(e->cmd & ((1 << CMD_BITS) - 1)));
+				if (e->cmd_idx >= 0) {
+					e->feature->set_geometry(e->cmd_idx, 
+						(e->length << CMD_BITS) |
+						(e->cmd & ((1 << CMD_BITS) - 1)));
+				}
 			}
 		}
 	}
@@ -361,7 +381,7 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, do
 	return 0;
 }
 
-void drawPixel(double x, double y, struct graphics *gc, double bright, double hue, struct tilecontext *tc) {
+void drawPixel(double x, double y, struct graphics *gc, double bright, double hue, long long meta, struct tilecontext *tc) {
 	x += .5;
 	y += .5;
 
@@ -386,7 +406,19 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 		yu = 255;
 	}
 
-	struct pointlayer *p = e->used[256 * yu + xu];
+	struct metapointlayer **mpl = &e->metapointlayers;
+	while (*mpl != NULL) {
+		if ((*mpl)->meta == meta) {
+			break;
+		}
+
+		mpl = &((*mpl)->next);
+	}
+	if (*mpl == NULL) {
+		*mpl = new_metapointlayer(meta, *mpl);
+	}
+
+	struct pointlayer *p = (*mpl)->used[256 * yu + xu];
 	while (p->npoints >= MAX_POINTS) {
 		if (p->next == NULL) {
 			p->next = new_pointlayer();
@@ -396,7 +428,7 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 	if (p->next == NULL) {
 		p->next = new_pointlayer();
 	}
-	e->used[256 * yu + xu] = p->next;
+	(*mpl)->used[256 * yu + xu] = p->next;
 
 	if (p->npoints + 1 >= p->npalloc) {
 		p->npalloc *= 2;
@@ -409,6 +441,6 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 	p->npoints++;
 }
 
-void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, int gaussian, struct tilecontext *tc) {
-	drawPixel(x - .5, y - .5, gc, bright, hue, tc);
+void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc) {
+	drawPixel(x - .5, y - .5, gc, bright, hue, meta, tc);
 }

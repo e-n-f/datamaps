@@ -248,9 +248,9 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			if (circle > 0) {
 				if (size < .5) {
 					if (b <= 1) {
-						drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b * meta / innerstep, hue, &tc);
+						drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b * meta / innerstep, hue, meta, &tc);
 					} else {
-						drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright * meta / innerstep, b, hue, gaussian, &tc);
+						drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright * meta / innerstep, b, hue, meta, gaussian, &tc);
 						ret = 1;
 					}
 				} else {
@@ -271,9 +271,9 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 							double yp = yc + size * r * sin(ang);
 
 							if (b <= 1) {
-								drawPixel(xp - .5, yp - .5, gc, bright * b, hue, &tc);
+								drawPixel(xp - .5, yp - .5, gc, bright * b, hue, meta, &tc);
 							} else {
-								drawBrush(xp, yp, gc, bright, b, hue, gaussian, &tc);
+								drawBrush(xp, yp, gc, bright, b, hue, meta, gaussian, &tc);
 								ret = 1;
 							}
 						}
@@ -281,9 +281,9 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				}
 			} else {
 				if (b <= 1) {
-					drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, &tc);
+					drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, meta, &tc);
 				} else {
-					drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, gaussian, &tc);
+					drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, meta, gaussian, &tc);
 					ret = 1;
 				}
 			}
