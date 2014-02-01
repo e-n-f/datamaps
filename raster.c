@@ -24,7 +24,7 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 }
 
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
-void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright, double hue, double thick, struct tilecontext *tc) {
+void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright, double hue, long long meta, double thick, struct tilecontext *tc) {
 	int dx = abs(x1 - x0), sx = (x0 < x1) ? 1 : -1;
 	int dy = abs(y1 - y0), sy = (y0 < y1) ? 1 : -1;
 	int err = ((dx > dy) ? dx : -dy) / 2, e2;
@@ -34,16 +34,16 @@ void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright,
 			break;
 		}
 
-		drawPixel(x0, y0, g, bright, hue, tc);
+		drawPixel(x0, y0, g, bright, hue, meta, tc);
 
 		int n;
 		for (n = 1; n < ceil(thick / 2); n++) {
 			if (dx > dy) {
-				drawPixel(x0, y0 - n, g, bright, hue, tc);
-				drawPixel(x0, y0 + n, g, bright, hue, tc);
+				drawPixel(x0, y0 - n, g, bright, hue, meta, tc);
+				drawPixel(x0, y0 + n, g, bright, hue, meta, tc);
 			} else {
-				drawPixel(x0 - n, y0, g, bright, hue, tc);
-				drawPixel(x0 + n, y0, g, bright, hue, tc);
+				drawPixel(x0 - n, y0, g, bright, hue, meta, tc);
+				drawPixel(x0 + n, y0, g, bright, hue, meta, tc);
 			}
 		}
 
@@ -59,7 +59,7 @@ void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright,
 	}
 }
 
-int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, double bright, double hue, int antialias, double thick, struct tilecontext *tc) {
+int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, double bright, double hue, long long meta, int antialias, double thick, struct tilecontext *tc) {
 	double xmin = -1 - thick;
 	double ymin = -1 - thick;
 	double xmax = g->width + thick;
@@ -69,7 +69,7 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, dou
 
 	if (accept) {
 		if (g != NULL) {
-			drawLine(x0, y0, x1, y1, g, bright, hue, thick, tc);
+			drawLine(x0, y0, x1, y1, g, bright, hue, meta, thick, tc);
 		}
 
 		return 1;
@@ -78,7 +78,7 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, dou
 	return 0;
 }
 
-void drawPixel(double x, double y, struct graphics *g, double bright, double hue, struct tilecontext *tc) {
+void drawPixel(double x, double y, struct graphics *g, double bright, double hue, long long meta, struct tilecontext *tc) {
 	x -= tc->xoff;
 	y -= tc->yoff;
 
@@ -94,6 +94,6 @@ void drawPixel(double x, double y, struct graphics *g, double bright, double hue
 	printf("%.6f,%.6f\n", lat, lon);
 }
 
-void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, int gaussian, struct tilecontext *tc) {
-	drawPixel(x, y, g, bright, hue, tc);
+void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc) {
+	drawPixel(x, y, g, bright, hue, meta, tc);
 }

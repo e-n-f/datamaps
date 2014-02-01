@@ -315,24 +315,24 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 				if (xk - xk1 >= (1LL << 31)) {
 					wxy2fxy(xk - (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, meta, antialias, thick1, &tc);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 					wxy2fxy(xk1 + (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, meta, antialias, thick1, &tc);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 				} else if (xk1 - xk >= (1LL << 31)) {
 					wxy2fxy(xk1 - (1LL << 32), y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, meta, antialias, thick1, &tc);
 
 					wxy2fxy(x[k - 1], y[k - 1], &xd[k - 1], &yd[k - 1], z_draw, x_draw, y_draw);
 					wxy2fxy(xk + (1LL << 32), y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
-					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, meta, antialias, thick1, &tc);
 
 					wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 				} else {
-					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, antialias, thick1, &tc);
+					drawClip(xd[k - 1] * tilesize + xoff, yd[k - 1] * tilesize + yoff, xd[k] * tilesize + xoff, yd[k] * tilesize + yoff, gc, bright1, hue, meta, antialias, thick1, &tc);
 				}
 			}
 		}

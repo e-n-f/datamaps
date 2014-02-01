@@ -341,7 +341,7 @@ void useline(struct linelayer *l, int x0, int y0, int x1, int y1) {
 	}
 }
 
-int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, int antialias, double thick, struct tilecontext *tc) {
+int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, long long meta, int antialias, double thick, struct tilecontext *tc) {
 	double mult = XMAX / gc->width;
 	int accept = clip(&x0, &y0, &x1, &y1, -1, -1, XMAX / mult + 1, YMAX / mult + 1);
 
