@@ -235,7 +235,7 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 
 				for (i = 0; i < p->npoints; i++) {
 					op(e, MOVE_TO, p->points[i].x, p->points[i].y);
-					op(e, LINE_TO, p->points[i].x, p->points[i].y);
+					op(e, LINE_TO, p->points[i].x + 1, p->points[i].y);
 				}
 
 				if (e->cmd_idx >= 0) {
