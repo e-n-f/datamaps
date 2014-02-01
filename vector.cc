@@ -208,13 +208,23 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->layer->set_version(1);
 	e->layer->set_extent(XMAX);
 
+	e->layer->add_keys("meta", strlen("meta"));
+	int vals = -1;
+
 	struct metapointlayer *mpl;
 	for (mpl = e->metapointlayers; mpl != NULL; mpl = mpl->next) {
+		mapnik::vector::tile_value *tv = e->layer->add_values();
+		tv->set_int_value(mpl->meta);
+		vals++;
+
 		struct pointlayer *p;
 		for (p = mpl->pointlayers; p != NULL; p = p->next) {
 			if (p->npoints != 0) {
 				e->feature = e->layer->add_features();
 				e->feature->set_type(mapnik::vector::tile::LineString);
+
+				e->feature->add_tags(0); /* key, "meta" */
+				e->feature->add_tags(vals); /* value */
 
 				e->x = 0;
 				e->y = 0;
