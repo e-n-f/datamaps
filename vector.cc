@@ -50,6 +50,13 @@ struct linelayer {
 	struct linelayer *next;
 };
 
+struct metalinelayer {
+	struct linelayer *linelayers;
+
+	long long meta;
+	struct metalinelayer *next;
+};
+
 class env {
 public:
 	mapnik::vector::tile tile;
@@ -63,9 +70,8 @@ public:
 	int cmd;
 	int length;
 
-	struct linelayer *linelayers;
-
 	struct metapointlayer *metapointlayers;
+	struct metalinelayer *metalinelayers;
 };
 
 #define MOVE_TO 1
@@ -115,12 +121,21 @@ struct linelayer *new_linelayer() {
 	return l;
 }
 
+struct metalinelayer *new_metalinelayer(long long meta, struct metalinelayer *next) {
+	struct metalinelayer *mll = (struct metalinelayer*) malloc(sizeof(struct metalinelayer));
+	mll->linelayers = NULL;
+	mll->meta = meta;
+	mll->next = next;
+
+	return mll;
+}
+
 struct graphics *graphics_init(int width, int height) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	env *e = new env;
 
-	e->linelayers = new_linelayer();
+	e->metalinelayers = NULL;
 	e->metapointlayers = NULL;
 
 	struct graphics *g = (struct graphics *) malloc(sizeof(struct graphics));
@@ -171,33 +186,46 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->layer->set_version(1);
 	e->layer->set_extent(XMAX);
 
-	struct linelayer *l;
-	for (l = e->linelayers; l != NULL; l = l->next){
-		e->feature = e->layer->add_features();
-		e->feature->set_type(mapnik::vector::tile::LineString);
+	e->layer->add_keys("meta", strlen("meta"));
+	int vals = -1;
 
-		e->x = 0;
-		e->y = 0;
+	struct metalinelayer *mll;
+	for (mll = e->metalinelayers; mll != NULL; mll = mll->next) {
+		mapnik::vector::tile_value *tv = e->layer->add_values();
+		tv->set_int_value(mll->meta);
+		vals++;
 
-		e->cmd_idx = -1;
-		e->cmd = -1;
-		e->length = 0;
+		struct linelayer *l;
+		for (l = mll->linelayers; l != NULL; l = l->next){
+			e->feature = e->layer->add_features();
+			e->feature->set_type(mapnik::vector::tile::LineString);
 
-		for (i = 0; i < l->nlines; i++) {
-			// printf("draw %d %d to %d %d\n", e->lines[i].x0, e->lines[i].y0, e->lines[i].x1, e->lines[i].y1);
+			e->feature->add_tags(0); /* key, "meta" */
+			e->feature->add_tags(vals); /* value */
 
-			if (l->lines[i].x0 != e->x || l->lines[i].y0 != e->y || e->length == 0) {
-				op(e, MOVE_TO, l->lines[i].x0, l->lines[i].y0);
+			e->x = 0;
+			e->y = 0;
+
+			e->cmd_idx = -1;
+			e->cmd = -1;
+			e->length = 0;
+
+			for (i = 0; i < l->nlines; i++) {
+				// printf("draw %d %d to %d %d\n", e->lines[i].x0, e->lines[i].y0, e->lines[i].x1, e->lines[i].y1);
+
+				if (l->lines[i].x0 != e->x || l->lines[i].y0 != e->y || e->length == 0) {
+					op(e, MOVE_TO, l->lines[i].x0, l->lines[i].y0);
+				}
+
+				op(e, LINE_TO, l->lines[i].x1, l->lines[i].y1);
 			}
 
-			op(e, LINE_TO, l->lines[i].x1, l->lines[i].y1);
-		}
-
-		if (e->cmd_idx >= 0) {
-			//printf("old command: %d %d\n", e->cmd, e->length);
-			e->feature->set_geometry(e->cmd_idx, 
-				(e->length << CMD_BITS) |
-				(e->cmd & ((1 << CMD_BITS) - 1)));
+			if (e->cmd_idx >= 0) {
+				//printf("old command: %d %d\n", e->cmd, e->length);
+				e->feature->set_geometry(e->cmd_idx, 
+					(e->length << CMD_BITS) |
+					(e->cmd & ((1 << CMD_BITS) - 1)));
+			}
 		}
 	}
 
@@ -209,7 +237,7 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->layer->set_extent(XMAX);
 
 	e->layer->add_keys("meta", strlen("meta"));
-	int vals = -1;
+	vals = -1;
 
 	struct metapointlayer *mpl;
 	for (mpl = e->metapointlayers; mpl != NULL; mpl = mpl->next) {
@@ -362,7 +390,23 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, do
 		int yy1 = y1 * mult;
 
 		env *e = gc->e;
-		struct linelayer *l = e->linelayers;
+		struct metalinelayer **mll = &(e->metalinelayers);
+		while (*mll != NULL) {
+			if ((*mll)->meta == meta) {
+				break;
+			}
+
+			mll = &((*mll)->next);
+		}
+		if (*mll == NULL) {
+			*mll = new_metalinelayer(meta, *mll);
+		}
+
+		if ((*mll)->linelayers == NULL) {
+			(*mll)->linelayers = new_linelayer();
+		}
+
+		struct linelayer *l = (*mll)->linelayers;
 
 		if (xx0 != xx1 || yy0 != yy1) {
 			while (l->nlines > MAX_POINTS || lineused(l, x0, y0, x1, y1)) {
