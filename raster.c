@@ -11,12 +11,13 @@ struct graphics {
 	int height;
 };
 
-struct graphics *graphics_init(int width, int height) {
+struct graphics *graphics_init(int width, int height, char **filetype) {
 	struct graphics *g = malloc(sizeof(struct graphics));
 
 	g->width = width;
 	g->height = height;
 
+	*filetype = "txt";
 	return g;
 }
 

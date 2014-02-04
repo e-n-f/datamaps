@@ -353,7 +353,7 @@ void *fmalloc(size_t size) {
 	return p;
 }
 
-void prep(char *outdir, int z, int x, int y) {
+void prep(char *outdir, int z, int x, int y, char *filetype) {
 	if (outdir == NULL) {
 		return;
 	}
@@ -369,7 +369,7 @@ void prep(char *outdir, int z, int x, int y) {
 	sprintf(path, "%s/%d/%d", outdir, z, x);
 	mkdir(path, 0777);
 
-	sprintf(path, "%s/%d/%d/%d.png", outdir, z, x, y);
+	sprintf(path, "%s/%d/%d/%d.%s", outdir, z, x, y, filetype);
 	if (freopen(path, "wb", stdout) == NULL) {
 		perror(path);
 		exit(EXIT_FAILURE);
@@ -400,6 +400,7 @@ int main(int argc, char **argv) {
 	char *outdir = NULL;
 	int vector_styles = 0;
 	int leaflet_retina = 0;
+	char *filetype;
 
 	colors.active = 0;
 
@@ -756,7 +757,7 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			gc = graphics_init((x2 - x1 + fx2 - fx1) * tilesize, (y2 - y1 + fy2 - fy1) * tilesize);
+			gc = graphics_init((x2 - x1 + fx2 - fx1) * tilesize, (y2 - y1 + fy2 - fy1) * tilesize, &filetype);
 		}
 
 		unsigned int x, y;
@@ -772,11 +773,11 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", (int) (tilesize * (x2 - x1 + fx2 - fx1)), (int) (tilesize * (y2 - y1 + fy2 - fy1)));
-			prep(outdir, z_draw, x1, y1);
+			prep(outdir, z_draw, x1, y1, filetype);
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	} else {
-		struct graphics *gc = graphics_init(tilesize, tilesize);
+		struct graphics *gc = graphics_init(tilesize, tilesize, &filetype);
 
 		unsigned int x_draw = atoi(argv[optind + 2]);
 		unsigned int y_draw = atoi(argv[optind + 3]);
@@ -807,7 +808,7 @@ int main(int argc, char **argv) {
 		}
 
 		if (!dump) {
-			prep(outdir, z_draw, x_draw, y_draw);
+			prep(outdir, z_draw, x_draw, y_draw, filetype);
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	}

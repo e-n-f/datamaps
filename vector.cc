@@ -130,7 +130,7 @@ struct metalinelayer *new_metalinelayer(long long meta, struct metalinelayer *ne
 	return mll;
 }
 
-struct graphics *graphics_init(int width, int height) {
+struct graphics *graphics_init(int width, int height, char **filetype) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	env *e = new env;
@@ -143,6 +143,7 @@ struct graphics *graphics_init(int width, int height) {
 	g->width = width;
 	g->height = height;
 
+	*filetype = strdup("pbf");
 	return g;
 }
 

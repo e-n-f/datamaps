@@ -20,7 +20,7 @@ struct graphics {
 	double *cy;
 };
 
-struct graphics *graphics_init(int width, int height) {
+struct graphics *graphics_init(int width, int height, char **filetype) {
 	struct graphics *g = malloc(sizeof(struct graphics));
 
 	g->width = width;
@@ -33,6 +33,7 @@ struct graphics *graphics_init(int width, int height) {
 	memset(g->cx, 0, width * height * sizeof(double));
 	memset(g->cy, 0, width * height * sizeof(double));
 
+	*filetype = "png";
 	return g;
 }
 
