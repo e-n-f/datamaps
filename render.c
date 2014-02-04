@@ -425,7 +425,7 @@ void prep(char *outdir, int z, int x, int y, char *filetype, char *fname) {
 
 	if (strcmp(filetype, "pbf") == 0) {
 		fprintf(fp, "\"json\": \"{");
-
+		fprintf(fp, "\\\"vector_layers\\\": [ { \\\"id\\\": \\\"points\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {\\\"meta\\\": \\\"Number\\\" } }, { \\\"id\\\": \\\"lines\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {\\\"meta\\\": \\\"Number\\\" } } ]", minzoom, maxzoom, minzoom, maxzoom);
 		fprintf(fp, "}\",\n");
 	}
 
