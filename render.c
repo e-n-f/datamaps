@@ -7,6 +7,8 @@
 #include <string.h>
 #include <stddef.h>
 #include <math.h>
+#include <dirent.h>
+#include <ctype.h>
 #include <limits.h>
 #include "util.h"
 #include "graphics.h"
@@ -353,7 +355,22 @@ void *fmalloc(size_t size) {
 	return p;
 }
 
-void prep(char *outdir, int z, int x, int y, char *filetype) {
+void quote(FILE *fp, char *s) {
+	fprintf(fp, "\"");
+	for (; *s != '\0'; s++) {
+		if (*s == '\\' || *s == '\"') {
+			fputc('\\', fp);
+			fputc(*s, fp);
+		} else if (*s < ' ') {
+			fprintf(fp, "\\u%04x", *s);
+		} else {
+			fputc(*s, fp);
+		}
+	}
+	fprintf(fp, "\"");
+}
+
+void prep(char *outdir, int z, int x, int y, char *filetype, char *fname) {
 	if (outdir == NULL) {
 		return;
 	}
@@ -362,6 +379,60 @@ void prep(char *outdir, int z, int x, int y, char *filetype) {
 
 	sprintf(path, "%s", outdir);
 	mkdir(path, 0777);
+
+	// This is stupid, but we don't know how deep
+	// the enumeration will go from here
+	int maxzoom = z, minzoom = z;
+	DIR *d = opendir(outdir);
+	if (d != NULL) {
+		struct dirent *de;
+		while ((de = readdir(d)) != NULL) {
+			if (isdigit(*de->d_name)) {
+				int n = atoi(de->d_name);
+				if (n > maxzoom) {
+					maxzoom = n;
+				}
+				if (n < minzoom) {
+					minzoom = n;
+				}
+			}
+		}
+		closedir(d);
+	}
+
+	sprintf(path, "%s/metadata.json", outdir);
+	FILE *fp = fopen(path, "w");
+
+	if (fp == NULL) {
+		perror(path);
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(fp, "{\n");
+
+	fprintf(fp, "\"name\": ");
+	quote(fp, outdir);
+	fprintf(fp, ",\n");
+
+	fprintf(fp, "\"description\": ");
+	quote(fp, fname);
+	fprintf(fp, ",\n");
+	
+	fprintf(fp, "\"version\": 1,\n");
+	fprintf(fp, "\"minzoom\": %d,\n", minzoom);
+	fprintf(fp, "\"maxzoom\": %d,\n", maxzoom);
+	fprintf(fp, "\"type\": \"overlay\",\n");
+
+	if (strcmp(filetype, "pbf") == 0) {
+		fprintf(fp, "\"json\": \"{");
+
+		fprintf(fp, "}\",\n");
+	}
+
+	fprintf(fp, "\"format\": \"%s\"\n", filetype); // no trailing comma
+	fprintf(fp, "}\n");
+
+	fclose(fp);
 
 	sprintf(path, "%s/%d", outdir, z);
 	mkdir(path, 0777);
@@ -773,7 +844,7 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", (int) (tilesize * (x2 - x1 + fx2 - fx1)), (int) (tilesize * (y2 - y1 + fy2 - fy1)));
-			prep(outdir, z_draw, x1, y1, filetype);
+			prep(outdir, z_draw, x1, y1, filetype, files[0].name);
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	} else {
@@ -808,7 +879,7 @@ int main(int argc, char **argv) {
 		}
 
 		if (!dump) {
-			prep(outdir, z_draw, x_draw, y_draw, filetype);
+			prep(outdir, z_draw, x_draw, y_draw, filetype, files[0].name);
 			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
 		}
 	}
