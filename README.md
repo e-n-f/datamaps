@@ -159,7 +159,7 @@ Output file format
 <dd>Leaflet-style retina, where a request for a tile at zoom level N is actually a request for a quarter of a tile at zoom level N-1. In this case, the quarter-tiles remain 256x256.</dd>
 
 <dt>-o <i>dir</i></dt>
-<dd>Instead of outputting the PNG image to the standard output, write it in a file in the directory <i>dir</i> in the zoom/x/y hierarchy.</dd>
+<dd>Instead of outputting the PNG image to the standard output, write it in a file in the directory <i>dir</i> in the zoom/x/y hierarchy.</dd> It will also write a basic <i>dir/metadata.json</i> that will be used if you package the tiles with [mbutil](https://github.com/mapbox/mbutil).
 </dl>
 
 Background
