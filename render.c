@@ -68,12 +68,14 @@ static double cloudsize(int z_draw, int x_draw, int y_draw) {
 
 int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, struct color_range *colors, int xoff, int yoff, int version) {
 	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
+	int justdots = 0;
 
 	if (components == 0) {
 		sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
 		components = 1;
 	} else if (components == 1) {
 		sprintf(fn, "%s/1,0", fname);
+		justdots = 1;
 	} else {
 		sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
 	}
@@ -120,7 +122,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 	double brush = 1;
 	double thick = line_thick;
 	double bright1;
-	if (components == 1) {
+	if (justdots) {
 		bright1 = dot_bright;
 
 		if (z_draw > dot_base) {
@@ -183,18 +185,20 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 	for (; start < end; start += step * bytes) {
 		unsigned int x[components], y[components];
-		double xd[components], yd[components];
-		int k;
 		unsigned long long meta = 0;
 
 		buf2xys(start, mapbits, metabits, z_lookup, components, x, y, &meta);
+
+		int additional = 0;
+		double xd[components + additional], yd[components + additional];
+		int k;
 
 		if (!dump && z_draw >= mapbits / 2 - 8) {
 			// Add noise below the bottom of the file resolution
 			// so that it looks less gridded when overzoomed
 
 			int j;
-			for (j = 0; j < components; j++) {
+			for (j = 0; j < components + additional; j++) {
 				int noisebits = 32 - mapbits / 2;
 				int i;
 
@@ -218,17 +222,17 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 		double bright = bright1;
 
-		for (k = 0; k < components; k++) {
+		for (k = 0; k < components + additional; k++) {
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
 		}
 
 		if (dump) {
 			int should = 0;
 
-			if (components == 1) {
+			if (justdots) {
 				should = 1;
 			} else {
-				for (k = 1; k < components; k++) {
+				for (k = 1; k < components + additional; k++) {
 					double x1 = xd[k - 1];
 					double y1 = yd[k - 1];
 					double x2 = xd[k];
@@ -242,9 +246,9 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 			}
 
 			if (should) {
-				dump_out(dump, x, y, components, metabits, meta);
+				dump_out(dump, x, y, components + additional, metabits, meta);
 			}
-		} else if (components == 1) {
+		} else if (justdots) {
 			if (!antialias) {
 				xd[0] = ((int) (xd[0] * tilesize) + .5) / tilesize;
 				yd[0] = ((int) (yd[0] * tilesize) + .5) / tilesize;
@@ -293,7 +297,7 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 				}
 			}
 		} else {
-			for (k = 1; k < components; k++) {
+			for (k = 1; k < components + additional; k++) {
 				double bright1 = bright;
 
 				long long xk1 = x[k - 1];
