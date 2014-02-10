@@ -66,11 +66,20 @@ static double cloudsize(int z_draw, int x_draw, int y_draw) {
 	return size;
 }
 
-int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, struct color_range *colors, int xoff, int yoff) {
+int process(char *fname, int components, int z_lookup, unsigned char *startbuf, unsigned char *endbuf, int z_draw, int x_draw, int y_draw, struct graphics *gc, int mapbits, int metabits, int dump, int gps, struct color_range *colors, int xoff, int yoff, int version) {
+	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
+
+	if (components == 0) {
+		sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
+		components = 1;
+	} else if (components == 1) {
+		sprintf(fn, "%s/1,0", fname);
+	} else {
+		sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
+	}
+
 	int bytes = bytesfor(mapbits, metabits, components, z_lookup);
 	int ret = 0;
-
-	char fn[strlen(fname) + 1 + 5 + 1 + 5 + 1];
 
 	struct tilecontext tc;
 	tc.z = z_draw;
@@ -78,12 +87,6 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 	tc.y = y_draw;
 	tc.xoff = xoff;
 	tc.yoff = yoff;
-
-	if (components == 1) {
-		sprintf(fn, "%s/1,0", fname);
-	} else {
-		sprintf(fn, "%s/%d,%d", fname, components, z_lookup);
-	}
 
 	int fd = open(fn, O_RDONLY);
 	if (fd < 0) {
@@ -906,7 +909,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 	unsigned char startbuf[bytes];
 	unsigned char endbuf[bytes];
 	zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-	int further = process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+	int further = process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff, version);
 
 	// When overzoomed, also look up the adjacent tile
 	// to keep from drawing partial circles.
@@ -927,7 +930,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 			for (yy = y_draw - above; yy <= y_draw + below; yy++) {
 				if (x_draw != xx || y_draw != yy) {
 					zxy2bufs(z_draw, xx, yy, startbuf, endbuf, bytes);
-					process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+					process(fname, 1, z_draw, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff, version);
 				}
 			}
 		}
@@ -965,7 +968,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_draw, x_draw, y_draw, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff, version);
 		}
 	}
 
@@ -982,7 +985,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 			unsigned char startbuf[bytes];
 			unsigned char endbuf[bytes];
 			zxy2bufs(z_lookup, x_lookup, y_lookup, startbuf, endbuf, bytes);
-			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff);
+			process(fname, i, z_lookup, startbuf, endbuf, z_draw, x_draw, y_draw, gc, mapbits, metabits, dump, gps, colors, xoff, yoff, version);
 		}
 	}
 }
