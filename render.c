@@ -481,6 +481,7 @@ int main(int argc, char **argv) {
 		int metabits;
 		int maxn;
 		int bytes;
+		int version;
 	};
 
 	int nfiles = 0;
@@ -770,8 +771,12 @@ int main(int argc, char **argv) {
 		}
 
 		char s[2000] = "";
-		if (fgets(s, 2000, f) == NULL || strcmp(s, "1\n") != 0) {
+		if (fgets(s, 2000, f) == NULL || sscanf(s, "%d", &files[i].version) != 1) {
 			fprintf(stderr, "%s: Unknown version %s", meta, s);
+			exit(EXIT_FAILURE);
+		}
+		if (files[i].version > 1) {
+			fprintf(stderr, "%s: Version too large: %s", meta, s);
 			exit(EXIT_FAILURE);
 		}
 		if (fgets(s, 2000, f) == NULL || sscanf(s, "%d %d %d", &files[i].mapbits, &files[i].metabits, &files[i].maxn) != 3) {
