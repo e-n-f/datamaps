@@ -104,9 +104,9 @@ to give space in each record for 8 bits of metadata. Each input record, in addit
 to the location, also then needs to specify what color it should be, and the format
 for that looks like
 
-    40.711017,-74.011017 8:0
-    40.710933,-74.011250 8:85
-    40.710867,-74.011400 8:170
+    40.711017,-74.011017 :0
+    40.710933,-74.011250 :85
+    40.710867,-74.011400 :170
 
 to make the first one red, the second one green, and the third one blue. And then
 when rendering, you do
@@ -114,9 +114,6 @@ when rendering, you do
     render -C256
 
 to say that it should use the metadata as 256ths of the color wheel.
-
-Yes, it is silly to have to specify the size of the metadata in three different places
-in two different formats.
 
 ---
 

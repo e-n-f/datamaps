@@ -35,6 +35,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 	long long meta[MAX_INPUT];
 	unsigned int x[MAX_INPUT], y[MAX_INPUT];
 	unsigned long long seq = 0;
+	long long maxmeta = -1;
 
 	while (fgets(s, MAX_INPUT, f)) {
 		char *cp = s;
@@ -55,6 +56,23 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 					cp++;
 				}
 			} else if (sscanf(cp, "%d:%lld", &metasize[m], &meta[m]) == 2) {
+				if (meta[m] > maxmeta && meta[m] >= (1LLU << metabits)) {
+					fprintf(stderr, "Warning: metadata %lld too big for -m%d\n", meta[m], metabits);
+					maxmeta = meta[m];
+				}
+				m++;
+				while (*cp != '\0' && *cp != ' ') {
+					cp++;
+				}
+				while (*cp == ' ') {
+					cp++;
+				}
+			} else if (sscanf(cp, ":%lld", &meta[m]) == 1) {
+				if (meta[m] > maxmeta && meta[m] >= (1LLU << metabits)) {
+					fprintf(stderr, "Warning: metadata %lld too big for -m%d\n", meta[m], metabits);
+					maxmeta = meta[m];
+				}
+				metasize[m] = metabits;
 				m++;
 				while (*cp != '\0' && *cp != ' ') {
 					cp++;
