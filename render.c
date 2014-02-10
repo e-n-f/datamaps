@@ -50,7 +50,7 @@ struct color_range {
 	int active;
 };
 
-void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, struct color_range *colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff, int assemble);
+void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, int bytes, struct color_range *colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass, int xoff, int yoff, int assemble, int version);
 
 static double cloudsize(int z_draw, int x_draw, int y_draw) {
 	double lat, lon;
@@ -842,7 +842,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
 
 				for (i = 0; i < nfiles; i++) {
-					do_tile(gc, z_draw, x, y, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize, assemble);
+					do_tile(gc, z_draw, x, y, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize, assemble, files[i].version);
 				}
 			}
 		}
@@ -880,7 +880,7 @@ int main(int argc, char **argv) {
 		}
 
 		for (i = 0; i < nfiles; i++) {
-			do_tile(gc, z_draw_render, x_draw_render, y_draw_render, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, xoff, yoff, assemble);
+			do_tile(gc, z_draw_render, x_draw_render, y_draw_render, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, xoff, yoff, assemble, files[i].version);
 		}
 
 		if (!dump) {
@@ -898,7 +898,7 @@ int main(int argc, char **argv) {
 
 void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw,
 		int bytes, struct color_range *colors, char *fname, int mapbits, int metabits, int gps, int dump, int maxn, int pass,
-		int xoff, int yoff, int assemble) {
+		int xoff, int yoff, int assemble, int version) {
 	int i;
 
 	// Do the single-point case
@@ -933,6 +933,24 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 		}
 	}
 
+	// In version 1, segments with 2 through N points for each zoom level
+	// are in separate files numbered 2 through N.
+	//
+	// In version 2, all multipoint segments for a zoom level are in the
+	// same file (0), with the other points indexed through the metadata.
+	//
+	// This should address bad performance problems when there are many
+	// different sizes of polylines, at the expense of some storage size.
+
+	int start, end;
+	if (version < 2) {
+		start = 2;
+		end = maxn;
+	} else {
+		start = 0;
+		end = 0;
+	}
+
 	// Do the zoom levels numbered greater than this one.
 	//
 	// For zoom levels greater than this one, we look up the entire area
@@ -941,7 +959,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 
 	int z_lookup;
 	for (z_lookup = z_draw + 1; (dump || z_lookup < z_draw + 9) && z_lookup <= mapbits / 2; z_lookup++) {
-		for (i = 2; i <= maxn; i++) {
+		for (i = start; i <= end; i++) {
 			int bytes = bytesfor(mapbits, metabits, i, z_lookup);
 
 			unsigned char startbuf[bytes];
@@ -958,7 +976,7 @@ void do_tile(struct graphics *gc, unsigned int z_draw, unsigned int x_draw, unsi
 	for (z_lookup = z_draw, x_lookup = x_draw, y_lookup = y_draw;
 	     z_lookup >= 0;
 	     z_lookup--, x_lookup /= 2, y_lookup /= 2) {
-		for (i = 2; i <= maxn; i++) {
+		for (i = start; i <= end; i++) {
 			int bytes = bytesfor(mapbits, metabits, i, z_lookup);
 
 			unsigned char startbuf[bytes];
