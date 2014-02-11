@@ -264,6 +264,13 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	if (mapbits % 8 != 0) {
+		int b = (mapbits + 7) & ~7;
+		fprintf(stderr, "%s: Using zoom level %d, not %d\n", argv[0],
+			b / 2 - 8, mapbits / 2 - 8);
+		mapbits = b;
+	}
+
 	if (destdir == NULL) {
 		fprintf(stderr, "%s: Must specify a directory with -o\n", argv[0]);
 		usage(argv[0]);
