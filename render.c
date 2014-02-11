@@ -184,12 +184,17 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 	const double b = brush * (tilesize / 256.0) * (tilesize / 256.0);
 
 	for (; start < end; start += step * bytes) {
-		unsigned int x[components], y[components];
+		unsigned int x0[components], y0[components];
+		unsigned int *x = x0, *y = y0;
 		unsigned long long meta = 0;
 
-		buf2xys(start, mapbits, metabits, z_lookup, components, x, y, &meta);
+		buf2xys(start, mapbits, metabits, z_lookup, components, x0, y0, &meta);
 
 		int additional = 0;
+		if (metabits > 0 && version >= 2) {
+			// ...
+		}
+
 		double xd[components + additional], yd[components + additional];
 		int k;
 
