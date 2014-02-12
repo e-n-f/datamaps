@@ -12,6 +12,7 @@
 
 int mapbits = 2 * (16 + 8); // zoom level 16
 int metabits = 0;
+int version = 2;
 
 #define MAX_INPUT 2000
 
@@ -28,7 +29,7 @@ void usage(char *name) {
 		name);
 }
 
-void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
+void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff) {
 	char s[MAX_INPUT];
 	double lat[MAX_INPUT], lon[MAX_INPUT];
 	int metasize[MAX_INPUT];
@@ -36,6 +37,10 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 	unsigned int x[MAX_INPUT], y[MAX_INPUT];
 	unsigned long long seq = 0;
 	long long maxmeta = -1;
+
+	if (version == 2) {
+		metabits = 40;
+	}
 
 	while (fgets(s, MAX_INPUT, f)) {
 		char *cp = s;
@@ -112,6 +117,8 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 		// all the points have.
 
 		int common = 0;
+		int components = n;
+
 		if (n > 1) {
 			int ok = 1;
 			for (common = 0; ok && common < mapbits / 2; common++) {
@@ -130,10 +137,16 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 					break;
 				}
 			}
-		}
 
-		if (n > *maxn) {
-			*maxn = n;
+			if (version >= 2) {
+				components = n;
+				n = 1;
+				*maxn = 1;
+			} else {
+				if (n > *maxn) {
+					*maxn = n;
+				}
+			}
 		}
 
 		int bytes = bytesfor(mapbits, metabits, n, common);
@@ -146,8 +159,25 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn) {
 			xy2buf(x[i], y[i], buf, &off, mapbits, common);
 		}
 
-		for (i = 0; i < m; i++) {
-			meta2buf(metasize[i], meta[i], buf, &off, bytes * 8);
+		if (version >= 2) {
+			meta2buf(metasize[i], *xoff, buf, &off, bytes * 8);
+
+			if (components > 1) {
+				n = 0;
+			}
+
+			*xoff += writeSigned(extra, components);
+
+			int s = 32 - (mapbits / 2);
+			for (i = 1; i < components; i++) {
+				*xoff += writeSigned(extra, (x[i] >> s) - (x[i - 1] >> s));
+				*xoff += writeSigned(extra, (y[i] >> s) - (y[i - 1] >> s));
+			}
+			*xoff += writeSigned(extra, 0); // reserved for meta
+		} else {
+			for (i = 0; i < m; i++) {
+				meta2buf(metasize[i], meta[i], buf, &off, bytes * 8);
+			}
 		}
 
 		struct file **fo;
@@ -282,11 +312,25 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	char s[strlen(destdir) + 6 + 1];
+	sprintf(s, "%s/extra", destdir);
+	FILE *extra = NULL;
+	long long xoff = 0;
+	if (version >= 2) {
+		extra = fopen(s, "wb");
+		if (extra == NULL) {
+			perror(s);
+			exit(EXIT_FAILURE);
+		}
+		putc('\0', extra);
+		xoff++;
+	}
+
 	struct file *files = NULL;
 	int maxn = 0;
 
 	if (optind == argc) {
-		read_file(stdin, destdir, &files, &maxn);
+		read_file(stdin, destdir, &files, &maxn, extra, &xoff);
 	} else {
 		for (i = optind; i < argc; i++) {
 			FILE *f = fopen(argv[i], "r");
@@ -295,19 +339,18 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			read_file(f, destdir, &files, &maxn);
+			read_file(f, destdir, &files, &maxn, extra, &xoff);
 			fclose(f);
 		}
 	}
 
-	char s[strlen(destdir) + 5 + 1];
 	sprintf(s, "%s/meta", destdir);
 	FILE *f = fopen(s, "w");
 	if (f == NULL) {
 		perror(s);
 		exit(EXIT_FAILURE);
 	}
-	fprintf(f, "1\n");
+	fprintf(f, "%d\n", version);
 	fprintf(f, "%d %d %d\n", mapbits, metabits, maxn);
 	fclose(f);
 
@@ -329,7 +372,12 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
-		int bytes = bytesfor(mapbits, metabits, files->legs, files->level);
+		int bytes;
+		if (files->legs == 0) {
+			bytes = bytesfor(mapbits, metabits, 1, files->level);
+		} else {
+			bytes = bytesfor(mapbits, metabits, files->legs, files->level);
+		}
 		gSortBytes = bytes;
 
 		fprintf(stderr,
