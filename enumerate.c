@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
 	}
 
 	char s[2000] = "";
-	if (fgets(s, 2000, f) == NULL || strcmp(s, "1\n") != 0) {
+	if (fgets(s, 2000, f) == NULL || (strcmp(s, "1\n") != 0 && strcmp(s, "2\n") != 0)) {
 		fprintf(stderr, "%s: Unknown version %s", meta, s);
 		exit(EXIT_FAILURE);
 	}
@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
 
 	int z_lookup;
 	for (z_lookup = 0; z_lookup < depth; z_lookup++) {
-		for (i = 1; i <= maxn; i++) {
+		for (i = 0; i <= maxn; i++) {
 			if (i == 1 && z_lookup != 0) {
 				continue;
 			}
@@ -314,9 +314,9 @@ int main(int argc, char **argv) {
 			} else {
 				files[nfiles] = malloc(sizeof(struct file));
 				files[nfiles]->f = f;
-				files[nfiles]->components = i;
+				files[nfiles]->components = i == 0 ? 1 : i;
 				files[nfiles]->zoom = z_lookup;
-				files[nfiles]->bytes = bytesfor(mapbits, metabits, i, z_lookup);
+				files[nfiles]->bytes = bytesfor(mapbits, metabits, i == 0 ? 1 : i, z_lookup);
 				files[nfiles]->buf = malloc(files[nfiles]->bytes);
 				files[nfiles]->done = 0;
 
