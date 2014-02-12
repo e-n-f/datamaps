@@ -170,8 +170,8 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 
 			int s = 32 - (mapbits / 2);
 			for (i = 1; i < components; i++) {
-				*xoff += writeSigned(extra, (x[i] >> s) - (x[i - 1] >> s));
-				*xoff += writeSigned(extra, (y[i] >> s) - (y[i - 1] >> s));
+				*xoff += writeSigned(extra, (long long) (x[i] >> s) - (long long) (x[i - 1] >> s));
+				*xoff += writeSigned(extra, (long long) (y[i] >> s) - (long long) (y[i - 1] >> s));
 			}
 			*xoff += writeSigned(extra, 0); // reserved for meta
 		} else {

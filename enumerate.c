@@ -386,9 +386,10 @@ int main(int argc, char **argv) {
 				ya[0] = y[0];
 
 				int i;
+				int s = 32 - mapbits / 2;
 				for (i = 1; i < n; i++) {
-					xa[i] = xa[i - 1] + (decodeSigned(&b) << (31 - mapbits / 2));
-					ya[i] = ya[i - 1] + (decodeSigned(&b) << (31 - mapbits / 2));
+					xa[i] = xa[i - 1] + (decodeSigned(&b) << s);
+					ya[i] = ya[i - 1] + (decodeSigned(&b) << s);
 				}
 
 				dump_out(all, xa, ya, n, metabits, meta);
