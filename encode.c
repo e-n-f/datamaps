@@ -160,7 +160,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 		}
 
 		if (version >= 2) {
-			meta2buf(metasize[i], *xoff, buf, &off, bytes * 8);
+			meta2buf(metabits, *xoff, buf, &off, bytes * 8);
 
 			if (components > 1) {
 				n = 0;
