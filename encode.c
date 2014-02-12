@@ -14,7 +14,7 @@ int mapbits = 2 * (16 + 8); // zoom level 16
 int metabits = 0;
 int version = 2;
 
-#define MAX_INPUT 2000
+#define MAX_INPUT 200000
 
 struct file {
 	int legs;
