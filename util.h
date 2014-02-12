@@ -12,3 +12,7 @@ void buf2xys(const unsigned char *const buf, const int mapbits, const int metabi
 void meta2buf(int bits, long long data, unsigned char *buf, int *offbits, int max);
 
 int bytesfor(int mapbits, int metabits, int components, int z_lookup);
+
+int writeSigned(FILE *fp, long long value);
+long long decodeSigned(char **buf);
+

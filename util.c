@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -161,4 +162,51 @@ int bytesfor(int mapbits, int metabits, int components, int z_lookup) {
 	int bits = mapbits + metabits + (mapbits - 2 * z_lookup) * (components - 1);
 
 	return (bits + 7) / 8;
+}
+
+int writeUnsigned(FILE *fp, unsigned long long value) {
+	int written = 0;
+
+	while (1) {
+		if (value & ~0x7Fllu) {
+			putc(0x80 | (value & 0x7F), fp);
+			written++;
+			value >>= 7;
+		} else {
+			putc(value & 0x7F, fp);
+			written++;
+			break;
+		}
+	}
+
+	return written;
+}
+
+int writeSigned(FILE *fp, long long value) {
+	return writeUnsigned(fp, (value << 1) ^ (value >> 63));
+}
+
+unsigned long long decodeUnsigned(char **buf) {
+	unsigned long long value = 0;
+	int off = 0;
+
+	while (1) {
+		value |= (**buf & 0x7F) << off;
+		off += 7;
+
+		if (**buf & 0x80) {
+			(*buf)++;
+		} else {
+			(*buf)++;
+			break;
+		}
+	}
+
+	return value;
+}
+
+long long decodeSigned(char **buf) {
+	unsigned long long value = decodeUnsigned(buf);
+
+	return (value >> 1) ^ -(value & 1);
 }
