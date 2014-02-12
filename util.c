@@ -186,7 +186,7 @@ int writeSigned(FILE *fp, long long value) {
 	return writeUnsigned(fp, (value << 1) ^ (value >> 63));
 }
 
-unsigned long long decodeUnsigned(char **buf) {
+unsigned long long decodeUnsigned(unsigned char **buf) {
 	unsigned long long value = 0;
 	int off = 0;
 
@@ -205,7 +205,7 @@ unsigned long long decodeUnsigned(char **buf) {
 	return value;
 }
 
-long long decodeSigned(char **buf) {
+long long decodeSigned(unsigned char **buf) {
 	unsigned long long value = decodeUnsigned(buf);
 
 	return (value >> 1) ^ -(value & 1);

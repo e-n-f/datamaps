@@ -377,7 +377,24 @@ int main(int argc, char **argv) {
 		buf2xys(head->buf, mapbits, metabits, head->zoom, head->components, x, y, &meta);
 
 		if (all) {
-			dump_out(all, x, y, head->components, metabits, meta);
+			if (xmap != NULL) {
+				unsigned char *b = xmap + meta;
+				long long n = decodeSigned(&b);
+				unsigned int xa[n], ya[n];
+
+				xa[0] = x[0];
+				ya[0] = y[0];
+
+				int i;
+				for (i = 1; i < n; i++) {
+					xa[i] = xa[i - 1] + (decodeSigned(&b) << (31 - mapbits / 2));
+					ya[i] = ya[i - 1] + (decodeSigned(&b) << (31 - mapbits / 2));
+				}
+
+				dump_out(all, xa, ya, n, metabits, meta);
+			} else {
+				dump_out(all, x, y, head->components, metabits, meta);
+			}
 		} else {
 			long long xx = x[0], yy = y[0];
 

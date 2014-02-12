@@ -14,5 +14,5 @@ void meta2buf(int bits, long long data, unsigned char *buf, int *offbits, int ma
 int bytesfor(int mapbits, int metabits, int components, int z_lookup);
 
 int writeSigned(FILE *fp, long long value);
-long long decodeSigned(char **buf);
+long long decodeSigned(unsigned char **buf);
 
