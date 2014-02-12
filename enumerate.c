@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
 
 	char *fname = argv[optind];
 
-	char meta[strlen(fname) + 1 + 4 + 1];
+	char meta[strlen(fname) + 1 + 6 + 1];
 	sprintf(meta, "%s/meta", fname);
 	FILE *f = fopen(meta, "r");
 	if (f == NULL) {
@@ -264,6 +264,23 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 	fclose(f);
+
+	sprintf(meta, "%s/extra", fname);
+	int extra = open(meta, O_RDONLY);
+	if (extra < 0) {
+		perror(meta);
+		exit(EXIT_FAILURE);
+	}
+	struct stat st;
+	if (fstat(extra, &st) < 0) {
+		perror("stat");
+		exit(EXIT_FAILURE);
+	}
+	unsigned char *xmap = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, extra, 0);
+	if (xmap == MAP_FAILED) {
+		perror("mmap");
+		exit(EXIT_FAILURE);
+	}
 
 	if (maxzoom < 0) {
 		maxzoom = mapbits / 2 - 8;
