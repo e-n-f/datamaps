@@ -224,8 +224,26 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 		buf2xys(start, f->mapbits, f->metabits, z_lookup, components, x0, y0, &meta);
 
 		int additional = 0;
+		unsigned char *cp = NULL;
 		if (f->metabits > 0 && f->version >= 2) {
-			// ...
+			cp = xmap + meta;
+			additional = decodeSigned(&cp) - 1;
+		}
+
+		unsigned int xa[components + additional], ya[components + additional];
+		if (f->metabits > 0 && f->version >= 2) {
+			x = xa;
+			y = ya;
+			xa[0] = x0[0];
+			ya[0] = y0[0];
+
+			int i;
+			int s = 32 - f->mapbits / 2;
+			for (i = 1; i < components + additional; i++) {
+				xa[i] = xa[i - 1] + (decodeSigned(&cp) << s);
+				ya[i] = ya[i - 1] + (decodeSigned(&cp) << s);
+
+			}
 		}
 
 		double xd[components + additional], yd[components + additional];
