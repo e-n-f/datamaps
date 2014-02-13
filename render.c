@@ -117,6 +117,30 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 		exit(EXIT_FAILURE);
 	}
 
+	int xfd = 0;
+	struct stat xst;
+	unsigned char *xmap = NULL;
+
+	if (f->version >= 2) {
+		sprintf(fn, "%s/extra", f->name);
+		int xfd = open(fn, O_RDONLY);
+		if (xfd < 0) {
+			perror(fn);
+			return ret;
+		}
+
+		if (fstat(xfd, &xst) < 0) {
+			perror("stat");
+			exit(EXIT_FAILURE);
+		}
+
+		xmap = mmap(NULL, xst.st_size, PROT_READ, MAP_SHARED, xfd, 0);
+		if (xmap == MAP_FAILED) {
+			perror("mmap");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	gSortBytes = bytes;
 	unsigned char *start = search(startbuf, map, st.st_size / bytes, bytes, bufcmp);
 	unsigned char *end = search(endbuf, map, st.st_size / bytes, bytes, bufcmp);
@@ -363,6 +387,11 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 
 	munmap(map, st.st_size);
 	close(fd);
+
+	if (f->version >= 2) {
+		munmap(xmap, xst.st_size);
+		close(xfd);
+	}
 	return ret;
 }
 
@@ -787,7 +816,7 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "%s: Unknown version %s", meta, s);
 			exit(EXIT_FAILURE);
 		}
-		if (files[i].version > 1) {
+		if (files[i].version > 2) {
 			fprintf(stderr, "%s: Version too large: %s", meta, s);
 			exit(EXIT_FAILURE);
 		}
