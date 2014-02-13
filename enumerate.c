@@ -431,5 +431,8 @@ int main(int argc, char **argv) {
 		       usebounds ? &bounds : NULL);
 	}
 
+        munmap(xmap, st.st_size);
+        close(extra);
+
 	return 0;
 }

@@ -354,6 +354,10 @@ int main(int argc, char **argv) {
 	fprintf(f, "%d %d %d\n", mapbits, metabits, maxn);
 	fclose(f);
 
+	if (version >= 2) {
+		fclose(extra);
+	}
+
 	for (; files != NULL; files = files->next) {
 		fclose(files->f);
 
