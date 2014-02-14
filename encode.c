@@ -38,6 +38,7 @@ long long poolString(char *s, struct pool **pool, FILE *extra, long long *xoff) 
 			*pool = malloc(sizeof(struct pool));
 			(*pool)->s = strdup(s);
 			(*pool)->off = *xoff;
+			xoff += writeSigned(extra, strlen(s));
 			xoff += fwrite(s, sizeof(char), strlen(s), extra);
 			(*pool)->left = NULL;
 			(*pool)->right = NULL;
@@ -251,13 +252,14 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 
 			*xoff += writeSigned(extra, m);
 			for (i = 0; i < m; i++) {
-				*xoff += writeSigned(extra, metatype[m]);
 				*xoff += writeSigned(extra, keys[m]);
 
 				if (metatype[m] >= 0) {
+					// string
 					*xoff += writeSigned(extra, values[m]);
 				} else {
 					// XXX floating point
+					*xoff += writeSigned(extra, metatype[m]);
 					*xoff += writeSigned(extra, atoll(meta[m]));
 				}
 			}
