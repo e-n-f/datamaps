@@ -254,7 +254,12 @@ int main(int argc, char **argv) {
 	}
 
 	char s[2000] = "";
-	if (fgets(s, 2000, f) == NULL || (strcmp(s, "1\n") != 0 && strcmp(s, "2\n") != 0)) {
+	int version;
+	if (fgets(s, 2000, f) == NULL || sscanf(s, "%d", &version) != 1) {
+		fprintf(stderr, "%s: Unknown version %s", meta, s);
+		exit(EXIT_FAILURE);
+	}
+	if (version > 2) {
 		fprintf(stderr, "%s: Unknown version %s", meta, s);
 		exit(EXIT_FAILURE);
 	}
@@ -265,21 +270,25 @@ int main(int argc, char **argv) {
 	}
 	fclose(f);
 
-	sprintf(meta, "%s/extra", fname);
-	int extra = open(meta, O_RDONLY);
-	if (extra < 0) {
-		perror(meta);
-		exit(EXIT_FAILURE);
-	}
+	int extra = -1;
 	struct stat st;
-	if (fstat(extra, &st) < 0) {
-		perror("stat");
-		exit(EXIT_FAILURE);
-	}
-	unsigned char *xmap = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, extra, 0);
-	if (xmap == MAP_FAILED) {
-		perror("mmap");
-		exit(EXIT_FAILURE);
+	unsigned char *xmap = NULL;
+	if (version >= 2) {
+		sprintf(meta, "%s/extra", fname);
+		extra = open(meta, O_RDONLY);
+		if (extra < 0) {
+			perror(meta);
+			exit(EXIT_FAILURE);
+		}
+		if (fstat(extra, &st) < 0) {
+			perror("stat");
+			exit(EXIT_FAILURE);
+		}
+		xmap = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, extra, 0);
+		if (xmap == MAP_FAILED) {
+			perror("mmap");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (maxzoom < 0) {
@@ -431,8 +440,10 @@ int main(int argc, char **argv) {
 		       usebounds ? &bounds : NULL);
 	}
 
-        munmap(xmap, st.st_size);
-        close(extra);
+	if (version >= 2) {
+		munmap(xmap, st.st_size);
+		close(extra);
+	}
 
 	return 0;
 }
