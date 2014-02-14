@@ -39,7 +39,7 @@ long long poolString(char *s, struct pool **pool, FILE *extra, long long *xoff) 
 			(*pool)->s = strdup(s);
 			(*pool)->off = *xoff;
 			*xoff += writeSigned(extra, strlen(s));
-			*xoff += fwrite(s, sizeof(char), strlen(s), extra);
+			*xoff += fwrite(s, sizeof(char), strlen(s) + 1, extra);
 			(*pool)->left = NULL;
 			(*pool)->right = NULL;
 
@@ -235,6 +235,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 			}
 
 			meta2buf(metabits, *xoff, buf, &off, bytes * 8);
+			long long here = *xoff;
 
 			if (components > 1) {
 				n = 0;
@@ -250,14 +251,14 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 
 			*xoff += writeSigned(extra, m);
 			for (i = 0; i < m; i++) {
-				*xoff += writeSigned(extra, keys[m]);
+				*xoff += writeSigned(extra, keys[m] - here);
+				*xoff += writeSigned(extra, metatype[m]);
 
 				if (metatype[m] >= 0) {
 					// string
-					*xoff += writeSigned(extra, values[m]);
+					*xoff += writeSigned(extra, values[m] - here);
 				} else {
 					// XXX floating point
-					*xoff += writeSigned(extra, metatype[m]);
 					*xoff += writeSigned(extra, atoll(meta[m]));
 				}
 			}
