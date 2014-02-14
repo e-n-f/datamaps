@@ -38,8 +38,8 @@ long long poolString(char *s, struct pool **pool, FILE *extra, long long *xoff) 
 			*pool = malloc(sizeof(struct pool));
 			(*pool)->s = strdup(s);
 			(*pool)->off = *xoff;
-			xoff += writeSigned(extra, strlen(s));
-			xoff += fwrite(s, sizeof(char), strlen(s), extra);
+			*xoff += writeSigned(extra, strlen(s));
+			*xoff += fwrite(s, sizeof(char), strlen(s), extra);
 			(*pool)->left = NULL;
 			(*pool)->right = NULL;
 
@@ -445,6 +445,13 @@ int main(int argc, char **argv) {
 	fclose(f);
 
 	if (version >= 2) {
+		off_t fp = ftello(extra);
+
+		if (fp != xoff) {
+			fprintf(stderr, "Thought file position was %lld but it was %lld\n",
+				(long long) xoff, (long long) fp);
+		}
+
 		fclose(extra);
 	}
 
