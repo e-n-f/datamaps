@@ -15,7 +15,7 @@ int mapbits = 2 * (16 + 8); // zoom level 16
 int metabits = 0;
 int version = 2;
 
-#define MAX_INPUT 200000
+#define MAX_INPUT 2000
 
 struct file {
 	int legs;
@@ -25,12 +25,44 @@ struct file {
 	struct file *next;
 };
 
+struct pool {
+	char *s;
+	long long off;
+	struct pool *left;
+	struct pool *right;
+};
+
+long long poolString(char *s, struct pool **pool, FILE *extra, long long *xoff) {
+	while (1) {
+		if (*pool == NULL) {
+			*pool = malloc(sizeof(struct pool));
+			(*pool)->s = strdup(s);
+			(*pool)->off = *xoff;
+			xoff += fwrite(s, sizeof(char), strlen(s), extra);
+			(*pool)->left = NULL;
+			(*pool)->right = NULL;
+
+			return (*pool)->off;
+		}
+
+		int cmp = strcmp(s, (*pool)->s);
+
+		if (cmp == 0) {
+			return (*pool)->off;
+		} else if (cmp < 0) {
+			pool = &((*pool)->left);
+		} else {
+			pool = &((*pool)->right);
+		}
+	}
+}
+
 void usage(char *name) {
 	fprintf(stderr, "Usage: %s [-z zoom] [-m metadata-bits] -o destdir [file ...]\n",
 		name);
 }
 
-void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff) {
+void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff, struct pool **pool) {
 	char s[MAX_INPUT];
 	double lat[MAX_INPUT], lon[MAX_INPUT];
 	int metasize[MAX_INPUT];
@@ -193,6 +225,16 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 		}
 
 		if (version >= 2) {
+			long long keys[m], values[m];
+
+			for (i = 0; i < m; i++) {
+				keys[m] = poolString(metaname[i], pool, extra, xoff);
+
+				if (metatype[m] >= 0) {
+					values[m] = poolString(meta[i], pool, extra, xoff);
+				}
+			}
+
 			meta2buf(metabits, *xoff, buf, &off, bytes * 8);
 
 			if (components > 1) {
@@ -206,7 +248,19 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 				*xoff += writeSigned(extra, (long long) (x[i] >> s) - (long long) (x[i - 1] >> s));
 				*xoff += writeSigned(extra, (long long) (y[i] >> s) - (long long) (y[i - 1] >> s));
 			}
-			*xoff += writeSigned(extra, 0); // reserved for meta
+
+			*xoff += writeSigned(extra, m);
+			for (i = 0; i < m; i++) {
+				*xoff += writeSigned(extra, metatype[m]);
+				*xoff += writeSigned(extra, keys[m]);
+
+				if (metatype[m] >= 0) {
+					*xoff += writeSigned(extra, values[m]);
+				} else {
+					// XXX floating point
+					*xoff += writeSigned(extra, atoll(meta[m]));
+				}
+			}
 		} else {
 			for (i = 0; i < m; i++) {
 				meta2buf(metasize[i], atoll(meta[i]), buf, &off, bytes * 8);
@@ -300,6 +354,7 @@ int main(int argc, char **argv) {
 	extern int optind;
 	extern char *optarg;
 	char *destdir = NULL;
+	struct pool *pool = NULL;
 
 	while ((i = getopt(argc, argv, "z:m:o:")) != -1) {
 		switch (i) {
@@ -363,7 +418,7 @@ int main(int argc, char **argv) {
 	int maxn = 0;
 
 	if (optind == argc) {
-		read_file(stdin, destdir, &files, &maxn, extra, &xoff);
+		read_file(stdin, destdir, &files, &maxn, extra, &xoff, &pool);
 	} else {
 		for (i = optind; i < argc; i++) {
 			FILE *f = fopen(argv[i], "r");
@@ -372,7 +427,7 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 
-			read_file(f, destdir, &files, &maxn, extra, &xoff);
+			read_file(f, destdir, &files, &maxn, extra, &xoff, &pool);
 			fclose(f);
 		}
 	}
