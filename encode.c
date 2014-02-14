@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include "util.h"
 
 int mapbits = 2 * (16 + 8); // zoom level 16
@@ -33,7 +34,9 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 	char s[MAX_INPUT];
 	double lat[MAX_INPUT], lon[MAX_INPUT];
 	int metasize[MAX_INPUT];
-	long long meta[MAX_INPUT];
+	char *meta[MAX_INPUT];
+	char *metaname[MAX_INPUT];
+	int metatype[MAX_INPUT];
 	unsigned int x[MAX_INPUT], y[MAX_INPUT];
 	unsigned long long seq = 0;
 	long long maxmeta = -1;
@@ -60,28 +63,58 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 				while (*cp == ' ') {
 					cp++;
 				}
-			} else if (sscanf(cp, "%d:%lld", &metasize[m], &meta[m]) == 2) {
-				if (meta[m] > maxmeta && meta[m] >= (1LLU << metabits)) {
-					fprintf(stderr, "Warning: metadata %lld too big for -m%d\n", meta[m], metabits);
-					maxmeta = meta[m];
-				}
-				m++;
-				while (*cp != '\0' && *cp != ' ') {
+			} else if (sscanf(cp, "%d:", &metasize[m]) == 1) {
+				metasize[m] = atoi(cp);
+				while (*cp && isdigit(*cp)) {
 					cp++;
 				}
+				if (*cp == ':') {
+					cp++;
+				}
+
+				for (meta[m] = cp; *cp; cp++) {
+					if (isspace(*cp)) {
+						break;
+					}
+				}
+				if (*cp) {
+					cp++;
+				} else {
+					*cp = '\0';
+				}
+
+				if (atoll(meta[m]) > maxmeta && atoll(meta[m]) >= (1LLU << metabits)) {
+					fprintf(stderr, "Warning: metadata %s too big for -m%d\n", meta[m], metabits);
+					maxmeta = atoll(meta[m]);
+				}
+				metatype[m] = -1;
+				metaname[m] = "meta";
+				m++;
 				while (*cp == ' ') {
 					cp++;
 				}
-			} else if (sscanf(cp, ":%lld", &meta[m]) == 1) {
-				if (meta[m] > maxmeta && meta[m] >= (1LLU << metabits)) {
-					fprintf(stderr, "Warning: metadata %lld too big for -m%d\n", meta[m], metabits);
-					maxmeta = meta[m];
-				}
+			} else if (*cp == ':') {
 				metasize[m] = metabits;
-				m++;
-				while (*cp != '\0' && *cp != ' ') {
-					cp++;
+				cp++;
+
+				for (meta[m] = cp; *cp; cp++) {
+					if (isspace(*cp)) {
+						break;
+					}
 				}
+				if (*cp) {
+					cp++;
+				} else {
+					*cp = '\0';
+				}
+
+				if (atoll(meta[m]) > maxmeta && atoll(meta[m]) >= (1LLU << metabits)) {
+					fprintf(stderr, "Warning: metadata %s too big for -m%d\n", meta[m], metabits);
+					maxmeta = atoll(meta[m]);
+				}
+				metatype[m] = -1;
+				metaname[m] = "meta";
+				m++;
 				while (*cp == ' ') {
 					cp++;
 				}
@@ -176,7 +209,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 			*xoff += writeSigned(extra, 0); // reserved for meta
 		} else {
 			for (i = 0; i < m; i++) {
-				meta2buf(metasize[i], meta[i], buf, &off, bytes * 8);
+				meta2buf(metasize[i], atoll(meta[i]), buf, &off, bytes * 8);
 			}
 		}
 
