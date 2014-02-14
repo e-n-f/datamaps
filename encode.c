@@ -143,6 +143,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 					maxmeta = atoll(meta[m]);
 				}
 				metatype[m] = -1;
+				printf("set metatype to %d for %s\n", metatype[m], meta[m]);
 				metaname[m] = "meta";
 				m++;
 				while (*cp == ' ') {
@@ -226,10 +227,10 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 			long long keys[m], values[m];
 
 			for (i = 0; i < m; i++) {
-				keys[m] = poolString(metaname[i], pool, extra, xoff);
+				keys[i] = poolString(metaname[i], pool, extra, xoff);
 
-				if (metatype[m] >= 0) {
-					values[m] = poolString(meta[i], pool, extra, xoff);
+				if (metatype[i] >= 0) {
+					values[i] = poolString(meta[i], pool, extra, xoff);
 				}
 			}
 
@@ -250,15 +251,15 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 
 			*xoff += writeSigned(extra, m);
 			for (i = 0; i < m; i++) {
-				*xoff += writeSigned(extra, keys[m] - here);
-				*xoff += writeSigned(extra, metatype[m]);
+				*xoff += writeSigned(extra, keys[i] - here);
+				*xoff += writeSigned(extra, metatype[i]);
 
-				if (metatype[m] >= 0) {
+				if (metatype[i] >= 0) {
 					// string
-					*xoff += writeSigned(extra, values[m] - here);
+					*xoff += writeSigned(extra, values[i] - here);
 				} else {
 					// XXX floating point
-					*xoff += writeSigned(extra, atoll(meta[m]));
+					*xoff += writeSigned(extra, atoll(meta[i]));
 				}
 			}
 		} else {
