@@ -111,9 +111,8 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 					}
 				}
 				if (*cp) {
-					cp++;
-				} else {
 					*cp = '\0';
+					cp++;
 				}
 
 				if (atoll(meta[m]) > maxmeta && atoll(meta[m]) >= (1LLU << metabits)) {
@@ -136,9 +135,8 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 					}
 				}
 				if (*cp) {
-					cp++;
-				} else {
 					*cp = '\0';
+					cp++;
 				}
 
 				if (atoll(meta[m]) > maxmeta && atoll(meta[m]) >= (1LLU << metabits)) {
