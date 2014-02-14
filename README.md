@@ -96,11 +96,7 @@ The syntax for color is kind of silly, but it works, so I had better document it
 Colors are denoted by distance around the color wheel. The brightness and saturation
 are part of the density rendering; the color only controls the hue.
 
-If you want to have 256 possible hues, that takes 8 bits to encode, so you need to say
-
-    encode -m8
-
-to give space in each record for 8 bits of metadata. Each input record, in addition
+Each input record, in addition
 to the location, also then needs to specify what color it should be, and the format
 for that looks like
 
