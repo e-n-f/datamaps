@@ -388,6 +388,8 @@ int main(int argc, char **argv) {
 		if (all) {
 			if (xmap != NULL) {
 				unsigned char *b = xmap + meta;
+				unsigned char *here = b;
+
 				long long n = decodeSigned(&b);
 				unsigned int xa[n], ya[n];
 
@@ -401,7 +403,23 @@ int main(int argc, char **argv) {
 					ya[i] = ya[i - 1] + (decodeSigned(&b) << s);
 				}
 
-				dump_out(all, xa, ya, n, metabits, meta);
+				dump_out(all, xa, ya, n, 0, 0);
+
+				int m = decodeSigned(&b);
+				for (i = 0; i < m; i++) {
+					unsigned char *key = here + decodeSigned(&b);
+					decodeSigned(&key); // len
+					int type = decodeSigned(&b);
+
+					if (type >= 0) {
+						unsigned char *value = here + decodeSigned(&b);
+						decodeSigned(&value); // len
+						printf("=%s=%s\n", key, value);
+					} else {
+						long long value = decodeSigned(&b);
+						printf("=%s=%lld\n", key, value);
+					}
+				}
 			} else {
 				dump_out(all, x, y, head->components, metabits, meta);
 			}
