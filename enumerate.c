@@ -408,12 +408,10 @@ int main(int argc, char **argv) {
 				int m = decodeSigned(&b);
 				for (i = 0; i < m; i++) {
 					unsigned char *key = here + decodeSigned(&b);
-					decodeSigned(&key); // len
 					int type = decodeSigned(&b);
 
 					if (type >= 0) {
 						unsigned char *value = here + decodeSigned(&b);
-						decodeSigned(&value); // len
 						printf("=%s=%s\n", key, value);
 					} else {
 						long long value = decodeSigned(&b);

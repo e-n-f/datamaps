@@ -38,7 +38,6 @@ long long poolString(char *s, struct pool **pool, FILE *extra, long long *xoff) 
 			*pool = malloc(sizeof(struct pool));
 			(*pool)->s = strdup(s);
 			(*pool)->off = *xoff;
-			*xoff += writeSigned(extra, strlen(s));
 			*xoff += fwrite(s, sizeof(char), strlen(s) + 1, extra);
 			(*pool)->left = NULL;
 			(*pool)->right = NULL;
