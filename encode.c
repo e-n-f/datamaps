@@ -62,6 +62,37 @@ void usage(char *name) {
 		name);
 }
 
+char *dequote(char **cp, int *type) {
+	char *start = *cp;
+	char *out = *cp;
+
+	if (**cp == '"') {
+		*type = 0;
+	} else {
+		*type = -1;
+	}
+
+	int within = 0;
+	for (; **cp; (*cp)++) {
+		if (**cp == '"') {
+			within = !within;
+		} else if (**cp == '\\' && cp[0][1]) {
+			*out++ = cp[0][1];
+		} else if (isspace(**cp) && !within) {
+			break;
+		} else {
+			*out++ = cp[0][0];
+		}
+	}
+
+	if (*cp) {
+		(*cp)++;
+	}
+
+	*out = '\0';
+	return start;
+}
+
 void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff, struct pool **pool) {
 	char s[MAX_INPUT];
 	double lat[MAX_INPUT], lon[MAX_INPUT];
@@ -104,21 +135,12 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 					cp++;
 				}
 
-				for (meta[m] = cp; *cp; cp++) {
-					if (isspace(*cp)) {
-						break;
-					}
-				}
-				if (*cp) {
-					*cp = '\0';
-					cp++;
-				}
+				meta[m] = dequote(&cp, &metatype[m]);
 
 				if (atoll(meta[m]) > maxmeta && atoll(meta[m]) >= (1LLU << metabits)) {
 					fprintf(stderr, "Warning: metadata %s too big for -m%d\n", meta[m], metabits);
 					maxmeta = atoll(meta[m]);
 				}
-				metatype[m] = -1;
 				metaname[m] = "meta";
 				m++;
 				while (*cp == ' ') {
@@ -128,22 +150,12 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 				metasize[m] = metabits;
 				cp++;
 
-				for (meta[m] = cp; *cp; cp++) {
-					if (isspace(*cp)) {
-						break;
-					}
-				}
-				if (*cp) {
-					*cp = '\0';
-					cp++;
-				}
+				meta[m] = dequote(&cp, &metatype[m]);
 
 				if (atoll(meta[m]) > maxmeta && atoll(meta[m]) >= (1LLU << metabits)) {
 					fprintf(stderr, "Warning: metadata %s too big for -m%d\n", meta[m], metabits);
 					maxmeta = atoll(meta[m]);
 				}
-				metatype[m] = -1;
-				printf("set metatype to %d for %s\n", metatype[m], meta[m]);
 				metaname[m] = "meta";
 				m++;
 				while (*cp == ' ') {
