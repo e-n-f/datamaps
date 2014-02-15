@@ -223,6 +223,10 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 					*maxn = n;
 				}
 			}
+		} else {
+			if (n > *maxn) {
+				*maxn = n;
+			}
 		}
 
 		int bytes = bytesfor(mapbits, metabits, n, common);
