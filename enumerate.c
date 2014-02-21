@@ -390,7 +390,9 @@ int main(int argc, char **argv) {
 				unsigned char *b = xmap + meta;
 				unsigned char *here = b;
 
-				long long n = decodeSigned(&b);
+				long long type = decodeSigned(&b);
+				long long n = type >> GEOM_TYPE_BITS;
+				type &= GEOM_TYPE_MASK;
 				unsigned int xa[n], ya[n];
 
 				xa[0] = x[0];
@@ -410,10 +412,10 @@ int main(int argc, char **argv) {
 					unsigned char *key = here + decodeSigned(&b);
 					int type = decodeSigned(&b);
 
-					if (type >= 0) {
+					if (type == META_STRING) {
 						unsigned char *value = here + decodeSigned(&b);
 						printf("=%s=%s\n", key, value);
-					} else {
+					} else { // XXX other types
 						long long value = decodeSigned(&b);
 						printf("=%s=%lld\n", key, value);
 					}

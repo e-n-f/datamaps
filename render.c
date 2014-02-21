@@ -227,7 +227,10 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 		unsigned char *cp = NULL;
 		if (f->metabits > 0 && f->version >= 2) {
 			cp = xmap + meta;
-			additional = decodeSigned(&cp) - 1;
+			additional = decodeSigned(&cp);
+
+			int type = additional & GEOM_TYPE_MASK;
+			additional = (additional >> GEOM_TYPE_BITS) - 1;
 		}
 
 		unsigned int xa[components + additional], ya[components + additional];

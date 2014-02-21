@@ -67,9 +67,9 @@ char *dequote(char **cp, int *type) {
 	char *out = *cp;
 
 	if (**cp == '"') {
-		*type = 0;
+		*type = META_STRING;
 	} else {
-		*type = -1;
+		*type = META_INTEGER;
 	}
 
 	int within = 0;
@@ -245,7 +245,7 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 			for (i = 0; i < m; i++) {
 				keys[i] = poolString(metaname[i], pool, extra, xoff);
 
-				if (metatype[i] >= 0) {
+				if (metatype[i] == META_STRING) {
 					values[i] = poolString(meta[i], pool, extra, xoff);
 				}
 			}
@@ -257,7 +257,11 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 				n = 0;
 			}
 
-			*xoff += writeSigned(extra, components);
+			if (components == 1) {
+				*xoff += writeSigned(extra, (components << GEOM_TYPE_BITS) | GEOM_POINT);
+			} else { // XXX additional types
+				*xoff += writeSigned(extra, (components << GEOM_TYPE_BITS) | GEOM_LINESTRING);
+			}
 
 			int s = 32 - (mapbits / 2);
 			for (i = 1; i < components; i++) {
@@ -270,12 +274,16 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 				*xoff += writeSigned(extra, keys[i] - here);
 				*xoff += writeSigned(extra, metatype[i]);
 
-				if (metatype[i] >= 0) {
+				if (metatype[i] == META_STRING) {
 					// string
 					*xoff += writeSigned(extra, values[i] - here);
-				} else {
-					// XXX floating point
+				} else if (metatype[i] == META_INTEGER) {
+					// integer 
 					*xoff += writeSigned(extra, atoll(meta[i]));
+				} else {
+					// XXX
+					fprintf(stderr, "unsupported type %d\n", metatype[i]);
+					exit(EXIT_FAILURE);
 				}
 			}
 		} else {

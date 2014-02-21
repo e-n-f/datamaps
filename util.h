@@ -16,3 +16,17 @@ int bytesfor(int mapbits, int metabits, int components, int z_lookup);
 int writeSigned(FILE *fp, long long value);
 long long decodeSigned(unsigned char **buf);
 
+#define META_STRING 0
+#define META_INTEGER -1
+#define META_NUMBER -2
+
+#define GEOM_TYPE_BITS 4
+#define GEOM_TYPE_MASK 0x0F;
+
+#define GEOM_POINT 0
+#define GEOM_MULTIPOINT 1
+#define GEOM_LINESTRING 2
+#define GEOM_MULTILINESTRING 3
+#define GEOM_POLYGON 4
+#define GEOM_MULTIPOLYGON 5
+#define GEOM_COLLECTION 6
