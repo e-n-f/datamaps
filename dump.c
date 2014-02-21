@@ -18,7 +18,23 @@ void dump_end(int dump) {
 	}
 }
 
-void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int metabits, long long meta) {
+static void print_string(unsigned char *s) {
+	putchar('"');
+	for (; *s; s++) {
+		if (*s < ' ') {
+			printf("\\u%04x", (int) *s);
+		} else if (*s == '\\') {
+			printf("\\\\");
+		} else if (*s == '\"') {
+			printf("\\\"");
+		} else {
+			putchar(*s);
+		}
+	}
+	putchar('"');
+}
+
+void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int metabits, long long meta, struct dump_meta *data, int ndata) {
 	if (dump == 2) {
 		if (!first) {
 			printf(",\n");
@@ -27,10 +43,27 @@ void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int me
 
 		printf("{ ");
 		printf("\"type\": \"Feature\", ");
-		printf("\"properties\": {");
+		printf("\"properties\": { ");
 
 		if (metabits != 0) {
 			printf(" \"meta\": %lld ", meta);
+		} else {
+			int k;
+			for (k = 0; k < ndata; k++) {
+				printf("\"%s\" : ", data[k].key);
+
+				if (data[k].type == META_STRING) {
+					print_string(data[k].string_value);
+				} else if (data[k].type == META_INTEGER) {
+					printf("%lld", data[k].int_value);
+				}
+
+				if (k + 1 < ndata) {
+					printf(", ");
+				} else {
+					printf(" ");
+				}
+			}
 		}
 
 		printf("}, ");
@@ -77,6 +110,17 @@ void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int me
 
 		if (metabits != 0) {
 			printf("%d:%lld ", metabits, meta);
+		}
+
+		for (k = 0; k < ndata; k++) {
+			printf("=%s=", data[k].key);
+
+			if (data[k].type == META_STRING) {
+				print_string(data[k].string_value);
+				printf(" ");
+			} else if (data[k].type == META_INTEGER) {
+				printf("%lld ", data[k].int_value);
+			}
 		}
 
 		printf("// ");

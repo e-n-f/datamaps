@@ -405,23 +405,28 @@ int main(int argc, char **argv) {
 					ya[i] = ya[i - 1] + (decodeSigned(&b) << s);
 				}
 
-				dump_out(all, xa, ya, n, 0, 0);
-
 				int m = decodeSigned(&b);
+				struct dump_meta data[m];
+
 				for (i = 0; i < m; i++) {
 					unsigned char *key = here + decodeSigned(&b);
 					int type = decodeSigned(&b);
 
+					data[i].type = type;
+					data[i].key = key;
+
 					if (type == META_STRING) {
 						unsigned char *value = here + decodeSigned(&b);
-						printf("=%s=%s\n", key, value);
+						data[i].string_value = value;
 					} else { // XXX other types
 						long long value = decodeSigned(&b);
-						printf("=%s=%lld\n", key, value);
+						data[i].int_value = value;
 					}
 				}
+
+				dump_out(all, xa, ya, n, 0, 0, data, m);
 			} else {
-				dump_out(all, x, y, head->components, metabits, meta);
+				dump_out(all, x, y, head->components, metabits, meta, NULL, 0);
 			}
 		} else {
 			long long xx = x[0], yy = y[0];

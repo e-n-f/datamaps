@@ -305,7 +305,7 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 			}
 
 			if (should) {
-				dump_out(dump, x, y, components + additional, f->metabits, meta);
+				dump_out(dump, x, y, components + additional, f->metabits, meta, NULL, 0);
 			}
 		} else if (justdots) {
 			if (!antialias) {
