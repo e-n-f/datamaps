@@ -17,7 +17,7 @@ RENDER_PNG_OBJS = graphics.o
 RENDER_RASTER_OBJS = raster.o
 
 encode: $(ENCODE_OBJS)
-	$(CC) -g -Wall -O3 -o $@ $^ -lm
+	$(CC) -g -Wall -O3 -o $@ $^ -lm -ljsonpull
 
 render: $(RENDER_CORE_OBJS) $(RENDER_PNG_OBJS)
 	$(CC) -g -Wall -O3 -o $@ $^ -lm -lz $(PNG_LDFLAGS)

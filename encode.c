@@ -9,6 +9,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <jsonpull.h>
 #include "util.h"
 
 int mapbits = 2 * (16 + 8); // zoom level 16
@@ -110,6 +111,51 @@ char *dequote(char **cp, int *type) {
 	return start;
 }
 
+void read_json(FILE *f, char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff, struct pool **pool) {
+	json_pull *jp = json_begin_file(f);
+
+	while (1) {
+		json_object *j = json_read(jp);
+
+		if (j == NULL) {
+			if (jp->error != NULL) {
+				fprintf(stderr, "%d: %s\n", jp->line, jp->error);
+			}
+
+			json_free(jp->root);
+			break;
+		}
+
+		json_object *type = json_hash_get(j, "type");
+		if (type != NULL && type->type == JSON_STRING && strcmp(type->string, "Feature") == 0) {
+			json_object *geometry = json_hash_get(j, "geometry");
+
+			if (geometry != NULL) {
+				json_object *geometry_type = json_hash_get(geometry, "type");
+				if (geometry_type != NULL && geometry_type->type == JSON_STRING) {
+					int t = -1;
+
+					if (strcmp(geometry_type->string, "Point") == 0) {
+						t = GEOM_POINT;
+					} else if (strcmp(geometry_type->string, "LineString") == 0) {
+						t = GEOM_LINESTRING;
+					} else {
+						fprintf(stderr, "%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+					}
+
+					if (t != -1) {
+						printf("type %d\n", t);
+					}
+				}
+			}
+
+			json_free(j);
+		}
+	}
+
+	json_end(jp);
+}
+
 void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff, struct pool **pool) {
 	char s[MAX_INPUT];
 	double lat[MAX_INPUT], lon[MAX_INPUT];
@@ -123,6 +169,16 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 
 	if (version == 2) {
 		metabits = 40;
+	}
+
+	int c = getc(f);
+	if (c != EOF) {
+		ungetc(c, f);
+	}
+
+	if (c == '{' || c == '[') {
+		read_json(f, destdir, files, maxn, extra, xoff, pool);
+		return;
 	}
 
 	while (fgets(s, MAX_INPUT, f)) {
