@@ -76,8 +76,24 @@ char *dequote(char **cp, int *type) {
 	for (; **cp; (*cp)++) {
 		if (**cp == '"') {
 			within = !within;
-		} else if (**cp == '\\' && cp[0][1]) {
+		} else if (**cp == '\\' && (cp[0][1] == '\\' || cp[0][1] == '\"')) {
 			*out++ = cp[0][1];
+		} else if (**cp == '\\' && cp[0][1] == 'u') {
+			char hex[5] = "aaaa";
+			memcpy(hex, &(cp[0][2]), 4);
+			*cp += 5;
+
+			unsigned long ch = strtoul(hex, NULL, 16);
+			if (ch <= 0x7F) {
+				*out++ = ch;
+			} else if (ch <= 0x7FF) {
+				*out++ = 0xC0 | (ch >> 6);
+				*out++ = 0x80 | (ch & 0x3F);
+			} else {
+				*out++ = 0xE0 | (ch >> 12);
+				*out++ = 0x80 | ((ch >> 6) & 0x3F);
+				*out++ = 0x80 | (ch & 0x3F);
+			}
 		} else if (isspace(**cp) && !within) {
 			break;
 		} else {
@@ -157,6 +173,30 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 					maxmeta = atoll(meta[m]);
 				}
 				metaname[m] = "meta";
+				m++;
+				while (*cp == ' ') {
+					cp++;
+				}
+			} else if (*cp == '=') {
+				metasize[m] = metabits;
+				cp++;
+
+				metaname[m] = cp;
+				for (; *cp; cp++) {
+					if (*cp == '=') {
+						break;
+					}
+				}
+
+				if (*cp == 0) {
+					fprintf(stderr, "Didn't find value for %s\n", metaname[m]);
+					break;
+				}
+
+				*cp = '\0';
+				cp++;
+
+				meta[m] = dequote(&cp, &metatype[m]);
 				m++;
 				while (*cp == ' ') {
 					cp++;
