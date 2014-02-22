@@ -78,6 +78,7 @@ char *dequote(char **cp, int *type) {
 			within = !within;
 		} else if (**cp == '\\' && (cp[0][1] == '\\' || cp[0][1] == '\"')) {
 			*out++ = cp[0][1];
+			(*cp)++;
 		} else if (**cp == '\\' && cp[0][1] == 'u') {
 			char hex[5] = "aaaa";
 			memcpy(hex, &(cp[0][2]), 4);
