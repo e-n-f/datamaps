@@ -111,6 +111,10 @@ char *dequote(char **cp, int *type) {
 	return start;
 }
 
+void encode(char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff, struct pool **pool,
+	    int n, double *lat, double *lon,
+	    int m, int *metasize, char **metaname, char **meta, int *metatype);
+
 void read_json(FILE *f, char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff, struct pool **pool) {
 	json_pull *jp = json_begin_file(f);
 
@@ -163,7 +167,6 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 	char *meta[MAX_INPUT];
 	char *metaname[MAX_INPUT];
 	int metatype[MAX_INPUT];
-	unsigned int x[MAX_INPUT], y[MAX_INPUT];
 	unsigned long long seq = 0;
 	long long maxmeta = -1;
 
@@ -263,6 +266,21 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 			}
 		}
 
+		if (n == 0) {
+			fprintf(stderr, "No valid points in %s", s);
+			continue;
+		}
+
+		encode(destdir, files, maxn, extra, xoff, pool, n, lat, lon, m, metasize, metaname, meta, metatype);
+	}
+}
+
+void encode(char *destdir, struct file **files, int *maxn, FILE *extra, long long *xoff, struct pool **pool,
+	    int n, double *lat, double *lon,
+	    int m, int *metasize, char **metaname, char **meta, int *metatype) {
+	unsigned int x[MAX_INPUT], y[MAX_INPUT];
+
+	{
 		// Project each point to web mercator
 
 		int i;
@@ -279,11 +297,6 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 			}
 
 			latlon2tile(lat[i], lon[i], 32, &x[i], &y[i]);
-		}
-
-		if (n == 0) {
-			fprintf(stderr, "No valid points in %s", s);
-			continue;
 		}
 
 		// If this is a polyline, find out how many leading bits in common
