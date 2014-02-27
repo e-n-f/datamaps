@@ -170,10 +170,12 @@ void read_json(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 								if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
 									metatype[m] = META_STRING;
 									meta[m] = properties->values[i]->string;
+									printf("%s=%s\n", metaname[m], meta[m]);
 									m++;
-								} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
+								} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
 									metatype[m] = META_INTEGER;
 									meta[m] = properties->values[i]->string;
+									printf("%s=%s\n", metaname[m], meta[m]);
 									m++;
 								} else {
 									fprintf(stderr, "Unsupported meta type\n");
@@ -195,14 +197,17 @@ void read_json(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 							if (t == GEOM_POINT && coordinates->length >= 2) {
 								lon[0] = coordinates->array[0]->number;
 								lat[0] = coordinates->array[1]->number;
+								printf("%f,%f\n", lat[0], lon[0]);
 							} else {
 								for (i = 0; i < coordinates->length; i++) {
 									if (coordinates->array[i]->type == JSON_ARRAY &&
 									    coordinates->array[i]->length >= 2) {
 										lon[i] = coordinates->array[i]->array[0]->number;
 										lat[i] = coordinates->array[i]->array[1]->number;
+										printf("%f,%f ", lat[i], lon[i]);
 									}
 								}
+								printf("\n");
 							}
 
 							encode(destdir, files, maxn, extra, xoff, pool, n, lat, lon, m, metasize, metaname, meta, metatype);
