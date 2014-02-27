@@ -484,6 +484,7 @@ void encode(char *destdir, struct file **files, int *maxn, FILE *extra, long lon
 			char fn[strlen(destdir) + 10 + 1 + 10 + 1];
 			sprintf(fn, "%s/%d,%d", destdir, n, common);
 
+			(*fo)->next = NULL;
 			(*fo)->legs = n;
 			(*fo)->level = common;
 			(*fo)->f = fopen(fn, "w");
