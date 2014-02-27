@@ -150,6 +150,37 @@ void read_json(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 					if (t != -1) {
 						printf("type %d\n", t);
 					}
+
+					json_object *properties = json_hash_get(j, "properties");
+					json_object *coordinates = json_hash_get(geometry, "coordinates");
+
+					if (properties != NULL && properties->type == JSON_HASH) {
+						int metasize[properties->length];
+						char *metaname[properties->length];
+						char *meta[properties->length];
+						int metatype[properties->length];
+						int m = 0;
+
+						int i;
+						for (i = 0; i < properties->length; i++) {
+							if (properties->keys[i]->type == JSON_STRING) {
+								metasize[m] = 1;
+								metaname[m] = properties->keys[i]->string;
+
+								if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
+									metatype[m] = META_STRING;
+									meta[m] = properties->values[i]->string;
+									m++;
+								} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
+									metatype[m] = META_INTEGER;
+									meta[m] = properties->values[i]->string;
+									m++;
+								} else {
+									fprintf(stderr, "Unsupported meta type\n");
+								}
+							}
+						}
+					}
 				}
 			}
 
