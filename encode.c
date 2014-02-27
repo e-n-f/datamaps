@@ -164,7 +164,7 @@ void read_json(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 						int i;
 						for (i = 0; i < properties->length; i++) {
 							if (properties->keys[i]->type == JSON_STRING) {
-								metasize[m] = 1;
+								metasize[m] = metabits;
 								metaname[m] = properties->keys[i]->string;
 
 								if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
