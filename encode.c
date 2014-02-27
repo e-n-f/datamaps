@@ -180,6 +180,33 @@ void read_json(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 								}
 							}
 						}
+
+						if (coordinates != NULL && coordinates->type == JSON_ARRAY) {
+							int n;
+
+							if (t == GEOM_POINT) {
+								n = 1;
+							} else {
+								n = coordinates->length;
+							}
+
+							double lon[n], lat[n];
+
+							if (t == GEOM_POINT && coordinates->length >= 2) {
+								lon[0] = coordinates->array[0]->number;
+								lat[0] = coordinates->array[1]->number;
+							} else {
+								for (i = 0; i < coordinates->length; i++) {
+									if (coordinates->array[i]->type == JSON_ARRAY &&
+									    coordinates->array[i]->length >= 2) {
+										lon[i] = coordinates->array[i]->array[0]->number;
+										lat[i] = coordinates->array[i]->array[1]->number;
+									}
+								}
+							}
+
+							encode(destdir, files, maxn, extra, xoff, pool, n, lat, lon, m, metasize, metaname, meta, metatype);
+						}
 					}
 				}
 			}
