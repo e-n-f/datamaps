@@ -225,8 +225,11 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 
 		int additional = 0;
 		unsigned char *cp = NULL;
+		unsigned char *here = NULL;
 		if (f->metabits > 0 && f->version >= 2) {
 			cp = xmap + meta;
+			here = cp;
+			
 			additional = decodeSigned(&cp);
 
 			int type = additional & GEOM_TYPE_MASK;
@@ -234,6 +237,8 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 		}
 
 		unsigned int xa[components + additional], ya[components + additional];
+		int m = 0;
+
 		if (f->metabits > 0 && f->version >= 2) {
 			x = xa;
 			y = ya;
@@ -246,6 +251,30 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 				xa[i] = xa[i - 1] + (decodeSigned(&cp) << s);
 				ya[i] = ya[i - 1] + (decodeSigned(&cp) << s);
 
+			}
+
+			m = decodeSigned(&cp);
+		}
+
+		struct dump_meta data[m];
+
+		if (m != 0) {
+			int i;
+
+			for (i = 0; i < m; i++) {
+				unsigned char *key = here + decodeSigned(&cp);
+				int type = decodeSigned(&cp);
+
+				data[i].type = type;
+				data[i].key = key;
+
+				if (type == META_STRING) {
+					unsigned char *value = here + decodeSigned(&cp);
+					data[i].string_value = value;
+				} else { // XXX other types
+					long long value = decodeSigned(&cp);
+					data[i].int_value = value;
+				}
 			}
 		}
 
@@ -305,7 +334,11 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 			}
 
 			if (should) {
-				dump_out(dump, x, y, components + additional, f->metabits, meta, NULL, 0);
+				if (xmap != NULL) {
+					dump_out(dump, x, y, components + additional, 0, 0, data, m);
+				} else {
+					dump_out(dump, x, y, components + additional, f->metabits, meta, NULL, 0);
+				}
 			}
 		} else if (justdots) {
 			if (!antialias) {
