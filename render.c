@@ -57,6 +57,7 @@ struct file {
 	int maxn;
 	int bytes;
 	int version;
+	unsigned char *xmap;
 };
 
 void do_tile(struct graphics *gc, struct file *f, unsigned int z_draw, unsigned int x_draw, unsigned int y_draw, struct color_range *colors, int gps, int dump, int pass, int xoff, int yoff, int assemble);
@@ -117,27 +118,26 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 		exit(EXIT_FAILURE);
 	}
 
-	int xfd = 0;
-	struct stat xst;
-	unsigned char *xmap = NULL;
-
 	if (f->version >= 2) {
-		sprintf(fn, "%s/extra", f->name);
-		int xfd = open(fn, O_RDONLY);
-		if (xfd < 0) {
-			perror(fn);
-			return ret;
-		}
+		if (f->xmap == NULL) {
+			sprintf(fn, "%s/extra", f->name);
+			int xfd = open(fn, O_RDONLY);
+			if (xfd < 0) {
+				perror(fn);
+				return ret;
+			}
 
-		if (fstat(xfd, &xst) < 0) {
-			perror("stat");
-			exit(EXIT_FAILURE);
-		}
+			struct stat xst;
+			if (fstat(xfd, &xst) < 0) {
+				perror("stat");
+				exit(EXIT_FAILURE);
+			}
 
-		xmap = mmap(NULL, xst.st_size, PROT_READ, MAP_SHARED, xfd, 0);
-		if (xmap == MAP_FAILED) {
-			perror("mmap");
-			exit(EXIT_FAILURE);
+			f->xmap = mmap(NULL, xst.st_size, PROT_READ, MAP_SHARED, xfd, 0);
+			if (f->xmap == MAP_FAILED) {
+				perror("mmap");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
@@ -227,7 +227,7 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 		unsigned char *cp = NULL;
 		unsigned char *here = NULL;
 		if (f->metabits > 0 && f->version >= 2) {
-			cp = xmap + meta;
+			cp = f->xmap + meta;
 			here = cp;
 			
 			additional = decodeSigned(&cp);
@@ -334,7 +334,7 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 			}
 
 			if (should) {
-				if (xmap != NULL) {
+				if (f->xmap != NULL) {
 					dump_out(dump, x, y, components + additional, 0, 0, data, m);
 				} else {
 					dump_out(dump, x, y, components + additional, f->metabits, meta, NULL, 0);
@@ -442,10 +442,6 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 	munmap(map, st.st_size);
 	close(fd);
 
-	if (f->version >= 2) {
-		munmap(xmap, xst.st_size);
-		close(xfd);
-	}
 	return ret;
 }
 
@@ -881,6 +877,7 @@ int main(int argc, char **argv) {
 		fclose(f);
 
 		files[i].bytes = (files[i].mapbits + files[i].metabits + 7) / 8;
+		files[i].xmap = NULL;
 	}
 
 	if (dump) {
