@@ -358,7 +358,7 @@ void drawLine(int x0, int y0, int x1, int y1, struct graphics *g, double bright,
 	}
 }
 
-int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, double bright, double hue, long long meta, int antialias, double thick, struct tilecontext *tc) {
+int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, double bright, double hue, long long meta, int antialias, double thick, struct tilecontext *tc, int m, struct dump_meta *data) {
 	double xmin = -1 - thick;
 	double ymin = -1 - thick;
 	double xmax = g->width + thick;
@@ -381,7 +381,7 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *g, dou
 	return 0;
 }
 
-void drawPixel(double x, double y, struct graphics *g, double bright, double hue, long long meta, struct tilecontext *tc) {
+void drawPixel(double x, double y, struct graphics *g, double bright, double hue, long long meta, struct tilecontext *tc, int m, struct dump_meta *data) {
 	putPixel(x,     y,     bright * rfpart(x) * rfpart(y), g, hue);
 	putPixel(x + 1, y,     bright *  fpart(x) * rfpart(y), g, hue);
 	putPixel(x,     y + 1, bright * rfpart(x) *  fpart(y), g, hue);
@@ -393,7 +393,7 @@ static int brushwidth = -1;
 static int thegaussian = -1;
 static double *brushbytes = NULL;
 
-void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc) {
+void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc, int m, struct dump_meta *data) {
 	if (brush != thebrush || gaussian != thegaussian) {
 		free(brushbytes);
 		thebrush = brush;
@@ -478,7 +478,7 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 	int xx, yy;
 	for (xx = 0; xx < width; xx++) {
 		for (yy = 0; yy < width; yy++) {
-			drawPixel(x + xx, y + yy, g, brushbytes[yy * width + xx] * bright / (MULT * MULT), hue, meta, tc);
+			drawPixel(x + xx, y + yy, g, brushbytes[yy * width + xx] * bright / (MULT * MULT), hue, meta, tc, m, data);
 		}
 	}
 }
