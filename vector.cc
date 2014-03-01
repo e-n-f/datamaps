@@ -10,6 +10,7 @@
 extern "C" {
 	#include "graphics.h"
 	#include "clip.h"
+	#include "util.h"
 }
 
 struct line {
@@ -380,7 +381,7 @@ void useline(struct linelayer *l, int x0, int y0, int x1, int y1) {
 	}
 }
 
-int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, long long meta, int antialias, double thick, struct tilecontext *tc) {
+int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, double bright, double hue, long long meta, int antialias, double thick, struct tilecontext *tc, int m, struct dump_meta *data) {
 	double mult = XMAX / gc->width;
 	int accept = clip(&x0, &y0, &x1, &y1, -1, -1, XMAX / mult + 1, YMAX / mult + 1);
 
@@ -436,7 +437,7 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, do
 	return 0;
 }
 
-void drawPixel(double x, double y, struct graphics *gc, double bright, double hue, long long meta, struct tilecontext *tc) {
+void drawPixel(double x, double y, struct graphics *gc, double bright, double hue, long long meta, struct tilecontext *tc, int m, struct dump_meta *data) {
 	x += .5;
 	y += .5;
 
@@ -496,6 +497,6 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 	p->npoints++;
 }
 
-void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc) {
-	drawPixel(x - .5, y - .5, gc, bright, hue, meta, tc);
+void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc, int m, struct dump_meta *data) {
+	drawPixel(x - .5, y - .5, gc, bright, hue, meta, tc, m, data);
 }
