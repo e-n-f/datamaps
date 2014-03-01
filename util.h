@@ -30,3 +30,10 @@ long long decodeSigned(unsigned char **buf);
 #define GEOM_POLYGON 4
 #define GEOM_MULTIPOLYGON 5
 #define GEOM_COLLECTION 6
+
+struct dump_meta {
+        int type;
+        unsigned char *key;
+        unsigned char *string_value;
+        long long int_value;
+};

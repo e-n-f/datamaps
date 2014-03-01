@@ -1,9 +1,4 @@
-struct dump_meta {
-	int type;
-	unsigned char *key;
-	unsigned char *string_value;
-	long long int_value;
-};
+struct dump_meta;
 
 void dump_begin(int dump);
 void dump_end(int dump);
