@@ -18,11 +18,17 @@ struct line {
 	int y0;
 	int x1;
 	int y1;
+
+	int m;
+	struct dump_meta *data;
 };
 
 struct point {
 	int x;
 	int y;
+
+	int m;
+	struct dump_meta *data;
 };
 
 #define MAX_POINTS 10000
@@ -57,6 +63,35 @@ struct metalinelayer {
 	long long meta;
 	struct metalinelayer *next;
 };
+
+struct pool {
+	int key;
+	char *s;
+	struct pool *left;
+	struct pool *right;
+};
+
+int getpool(char *s, struct pool **p, int *key) {
+	while (*p != NULL) {
+		int cmp = strcmp(s, (*p)->s);
+		if (cmp == 0) {
+			return (*p)->key;
+		} else if (cmp < 0) {
+			p = &((*p)->left);
+		} else {
+			p = &((*p)->right);
+		}
+	}
+
+	*p = (struct pool *) malloc(sizeof(struct pool));
+	(*p)->left = NULL;
+	(*p)->right = NULL;
+	(*p)->key = *key;
+	(*p)->s = s;
+
+	(*key)++;
+	return (*p)->key;
+}
 
 class env {
 public:
@@ -187,6 +222,12 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 	e->layer->set_name("lines");
 	e->layer->set_version(1);
 	e->layer->set_extent(XMAX);
+
+	struct pool *keys = NULL;
+	int nkeys = 0;
+
+	struct pool *values = NULL;
+	int nvalues = 0;
 
 	e->layer->add_keys("meta", strlen("meta"));
 	int vals = -1;
@@ -430,6 +471,10 @@ int drawClip(double x0, double y0, double x1, double y1, struct graphics *gc, do
 			l->lines[l->nlines].x1 = xx1;
 			l->lines[l->nlines].y1 = yy1;
 
+			l->lines[l->nlines].m = m;
+			l->lines[l->nlines].data = (struct dump_meta *) malloc(m * sizeof(struct dump_meta));
+			memcpy(l->lines[l->nlines].data, data, m * sizeof(struct dump_meta));
+
 			l->nlines++;
 		}
 	}
@@ -493,6 +538,10 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 
 	p->points[p->npoints].x = xx;
 	p->points[p->npoints].y = yy;
+
+	p->points[p->npoints].m = m;
+	p->points[p->npoints].data = (struct dump_meta *) malloc(m * sizeof(struct dump_meta));
+	memcpy(p->points[p->npoints].data, data, m * sizeof(struct dump_meta));
 
 	p->npoints++;
 }
