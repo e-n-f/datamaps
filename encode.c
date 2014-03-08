@@ -689,9 +689,9 @@ int main(int argc, char **argv) {
 		gSortBytes = bytes;
 
 		fprintf(stderr,
-		 	"Sorting %lld shapes of %d point(s), zoom level %d\n",
+		 	"Sorting %lld shapes sized for zoom level %d\n",
 			(long long) st.st_size / bytes,
-			files->legs, files->level);
+			files->level);
 
 		int page = sysconf(_SC_PAGESIZE);
 		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
@@ -709,7 +709,9 @@ int main(int argc, char **argv) {
 				end = st.st_size;
 			}
 
-			fprintf(stderr, "Sorting part %lld of %d\r", start / unit + 1, nmerges);
+			if (nmerges != 1) {
+				fprintf(stderr, "Sorting part %lld of %d\r", start / unit + 1, nmerges);
+			}
 
 			merges[start / unit].start = start;
 			merges[start / unit].end = end;
@@ -738,7 +740,9 @@ int main(int argc, char **argv) {
 			munmap(map2, end - start);
 		}
 
-		printf("\n");
+		if (nmerges != 1) {
+			fprintf(stderr, "\n");
+		}
 
 		void *map = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 		if (map == MAP_FAILED) {
