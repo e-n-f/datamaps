@@ -673,7 +673,7 @@ int main(int argc, char **argv) {
 			printf("  line-color: #FFFFFF;\n");
 		}
 		printf("  line-cap: round;\n");
-		printf("  line-width: %.3f;\n", 2 * sqrt(1 / M_PI)); // diameter of circle with area 1
+		printf("  line-width: %.3f;\n", 2 * sqrt(point_size / M_PI)); // diameter of circle with area point_size
 
 		if (color != -1 || color2 != -1) {
 			int r1 = (color >> 16)  & 0xFF;
@@ -707,7 +707,7 @@ int main(int argc, char **argv) {
 		}
 
 		// steps to get to full brightness with dot_bright
-		double steps = 1.0 / dot_bright;
+		double steps = 1.0 / (dot_bright / point_size);
 		// steps to get to half brightness, taking gamma into account
 		double halfsteps = steps * exp(log(.5) / display_gamma);
 		// alpha to get to half brightness with same number of steps
@@ -720,7 +720,7 @@ int main(int argc, char **argv) {
 			printf("  [zoom >= %2d] {", i);
 
 			// dot brightness decreases by ramp with each zoom
-			double steps = 1.0 / (dot_bright * exp(log(dot_ramp) * (i - dot_base)));
+			double steps = 1.0 / (dot_bright / point_size * exp(log(dot_ramp) * (i - dot_base)));
 			double halfsteps = steps * exp(log(.5) / display_gamma);
 			double alpha = 1 - exp(log(.5) / halfsteps);
 
@@ -731,14 +731,14 @@ int main(int argc, char **argv) {
 			printf("  [zoom >= %2d] {", i);
 
 			// dot brightness increases by ramp with each zoom
-			double steps = 1.0 / (dot_bright * exp(log(dot_ramp) * (i - dot_base)));
+			double steps = 1.0 / (dot_bright / point_size * exp(log(dot_ramp) * (i - dot_base)));
 			double halfsteps = steps * exp(log(.5) / display_gamma);
 			double alpha = 1 - exp(log(.5) / halfsteps);
 
 			printf(" line-opacity: %7.3f;", alpha);
 
 			// area doubles with each zoom
-			printf(" line-width: %7.3f;", 2 * sqrt((1 << (i - dot_base)) / M_PI));
+			printf(" line-width: %7.3f;", 2 * sqrt(point_size * (1 << (i - dot_base)) / M_PI));
 			printf(" }\n");
 		}
 
