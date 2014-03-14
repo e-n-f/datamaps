@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
 		buf2xys(head->buf, mapbits, metabits, head->zoom, head->components, x, y, &meta);
 
 		if (all) {
-			if (xmap != NULL) {
+			if (xmap != NULL && meta >= 0 && meta <= st.st_size) {
 				unsigned char *b = xmap + meta;
 				unsigned char *here = b;
 
