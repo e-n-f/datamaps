@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include "dump.h"
 #include "util.h"
 
@@ -113,7 +114,11 @@ void dump_out(int dump, unsigned int *x, unsigned int *y, int components, int me
 		}
 
 		for (k = 0; k < ndata; k++) {
-			printf("=%s=", data[k].key);
+			if (!isalpha(data[k].key[0])) {
+				printf("=");
+			}
+
+			printf("%s=", data[k].key);
 
 			if (data[k].type == META_STRING) {
 				print_string(data[k].string_value);

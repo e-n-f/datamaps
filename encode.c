@@ -310,9 +310,14 @@ void read_file(FILE *f, char *destdir, struct file **files, int *maxn, FILE *ext
 				while (*cp == ' ') {
 					cp++;
 				}
-			} else if (*cp == '=') {
+			} else if (*cp == '/' && cp[1] == '/') {
+				break;
+			} else if (*cp == '=' || isalpha(*cp)) {
 				metasize[m] = metabits;
-				cp++;
+
+				if (*cp == '=') {
+					cp++;
+				}
 
 				metaname[m] = cp;
 				for (; *cp; cp++) {
