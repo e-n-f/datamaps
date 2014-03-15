@@ -377,6 +377,10 @@ void encode(char *destdir, struct file **files, int *maxn, FILE *extra, long lon
 			latlon2tile(lat[i], lon[i], 32, &x[i], &y[i]);
 		}
 
+		if (n == 0) {
+			return;
+		}
+
 		// If this is a polyline, find out how many leading bits in common
 		// all the points have.
 
