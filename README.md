@@ -247,6 +247,9 @@ The hues are numbered in degrees: 0 for red, 30 for orange, 60 for yellow, 120 f
 <dd>Interpret the metadata as a number of points to be plotted in the specified
 <i>radius</i> (in feet or meters) around the point in the data.</dd>
 
+<dt>-x b</dt>
+<dd>Make the brightness of each feature proportional to the metadata value.</dd>
+
 </dl>
 
 Compensation
