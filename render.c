@@ -35,6 +35,7 @@ double display_gamma = .5;
 int antialias = 1;
 double mercator = -1;
 double exponent = 2;
+int metabright = 0;
 
 int tilesize = 256;
 
@@ -214,6 +215,10 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		}
 
 		double bright = bright1;
+
+		if (metabright) {
+			bright *= meta;
+		}
 
 		for (k = 0; k < components; k++) {
 			wxy2fxy(x[k], y[k], &xd[k], &yd[k], z_draw, x_draw, y_draw);
@@ -607,7 +612,9 @@ int main(int argc, char **argv) {
 			{
 				char unit;
 
-				if (sscanf(optarg, "c%f%c", &circle, &unit) != 2) {
+				if (strcmp(optarg, "b") == 0) {
+					metabright = 1;
+				} else if (sscanf(optarg, "c%f%c", &circle, &unit) != 2) {
 					fprintf(stderr, "Can't understand -x %s\n", optarg);
 					usage(argv);
 				} else {
