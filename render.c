@@ -614,10 +614,7 @@ int main(int argc, char **argv) {
 
 				if (strcmp(optarg, "b") == 0) {
 					metabright = 1;
-				} else if (sscanf(optarg, "c%f%c", &circle, &unit) != 2) {
-					fprintf(stderr, "Can't understand -x %s\n", optarg);
-					usage(argv);
-				} else {
+				} else if (sscanf(optarg, "c%f%c", &circle, &unit) == 2) {
 					if (unit == 'm') {
 						circle *= 3.28; // meters to feet
 					} else if (unit == 'f') {
@@ -626,6 +623,9 @@ int main(int argc, char **argv) {
 						fprintf(stderr, "Can't understand unit in -x %s\n", optarg);
 						usage(argv);
 					}
+				} else {
+					fprintf(stderr, "Can't understand -x %s\n", optarg);
+					usage(argv);
 				}
 			}
 			break;
