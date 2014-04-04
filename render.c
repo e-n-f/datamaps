@@ -36,6 +36,7 @@ int antialias = 1;
 double mercator = -1;
 double exponent = 2;
 int metabright = 0;
+long long maxmeta = LLONG_MAX;
 
 int tilesize = 256;
 
@@ -186,6 +187,10 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		unsigned long long meta = 0;
 
 		buf2xys(start, mapbits, metabits, z_lookup, components, x, y, &meta);
+
+		if (meta > maxmeta) {
+			continue;
+		}
 
 		if (!dump && z_draw >= mapbits / 2 - 8) {
 			// Add noise below the bottom of the file resolution
@@ -614,6 +619,8 @@ int main(int argc, char **argv) {
 
 				if (strcmp(optarg, "b") == 0) {
 					metabright = 1;
+				} else if (sscanf(optarg, "l%lld", &maxmeta) == 1) {
+					;
 				} else if (sscanf(optarg, "c%f%c", &circle, &unit) == 2) {
 					if (unit == 'm') {
 						circle *= 3.28; // meters to feet
