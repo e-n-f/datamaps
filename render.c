@@ -851,6 +851,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
 
 				for (i = 0; i < nfiles; i++) {
+					setClip(gc, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize, tilesize, tilesize);
 					do_tile(gc, z_draw, x, y, files[i].bytes, &colors, files[i].name, files[i].mapbits, files[i].metabits, gps, dump, files[i].maxn, i, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize, assemble);
 				}
 			}

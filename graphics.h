@@ -15,3 +15,4 @@ void out(struct graphics *graphics, int transparency, double gamma, int invert, 
 int drawClip(double x0, double y0, double x1, double y1, struct graphics *graphics, double bright, double hue, long long meta, int antialias, double thick, struct tilecontext *tc);
 void drawPixel(double x, double y, struct graphics *graphics, double bright, double hue, long long meta, struct tilecontext *tc);
 void drawBrush(double x, double y, struct graphics *graphics, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc);
+void setClip(struct graphics *gc, int x, int y, int w, int h);

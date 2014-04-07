@@ -3,6 +3,7 @@
 #include <string.h>
 #include <png.h>
 #include <math.h>
+#include <limits.h>
 #include "util.h"
 #include "graphics.h"
 #include "clip.h"
@@ -18,6 +19,11 @@ struct graphics {
 	double *image;
 	double *cx;
 	double *cy;
+
+	int clipx;
+	int clipy;
+	int clipwidth;
+	int clipheight;
 };
 
 struct graphics *graphics_init(int width, int height, char **filetype) {
@@ -32,6 +38,11 @@ struct graphics *graphics_init(int width, int height, char **filetype) {
 	memset(g->image, 0, width * height * sizeof(double));
 	memset(g->cx, 0, width * height * sizeof(double));
 	memset(g->cy, 0, width * height * sizeof(double));
+
+	g->clipx = 0;
+	g->clipy = 0;
+	g->clipwidth = INT_MAX;
+	g->clipheight = INT_MAX;
 
 	*filetype = "png";
 	return g;
@@ -192,11 +203,13 @@ static void putPixel(double x, double y, double bright, struct graphics *g, doub
 	int y0 = floor(y);
 
 	if (x0 >= 0 && y0 >= 0 && x0 <= g->width - 1 && y0 <= g->height - 1) {
-		g->image[y0 * g->width + x0] += bright;
+		if (x0 >= g->clipx && x0 < g->clipx + g->clipwidth && y0 >= g->clipy && y0 < g->clipy + g->clipheight) {
+			g->image[y0 * g->width + x0] += bright;
 
-		if (hue >= 0) {
-			g->cx[y0 * g->width + x0] += bright * cos(hue * 2 * M_PI);
-			g->cy[y0 * g->width + x0] += bright * sin(hue * 2 * M_PI);
+			if (hue >= 0) {
+				g->cx[y0 * g->width + x0] += bright * cos(hue * 2 * M_PI);
+				g->cy[y0 * g->width + x0] += bright * sin(hue * 2 * M_PI);
+			}
 		}
 	}
 }
@@ -481,4 +494,11 @@ void drawBrush(double x, double y, struct graphics *g, double bright, double bru
 			drawPixel(x + xx, y + yy, g, brushbytes[yy * width + xx] * bright / (MULT * MULT), hue, meta, tc);
 		}
 	}
+}
+
+void setClip(struct graphics *gc, int x, int y, int width, int height) {
+	gc->clipx = x;
+	gc->clipy = y;
+	gc->clipwidth = width;
+	gc->clipheight = height;
 }
