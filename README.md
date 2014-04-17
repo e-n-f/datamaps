@@ -4,6 +4,31 @@ Datamaps
 This is a tool for indexing large lists of geographic points or lines
 and dynamically generating map tiles from the index for display.
 
+
+Depends
+-------
+
+ - Modern C compiler like gcc or clang
+ - make
+ - libpng
+ - Ideally a 64 bit machine with >8 GB free memory
+
+
+Installation
+------------
+
+First install `make` and `libpng` then type:
+
+    make
+
+After the build finishes you will have 4 new command line programs available in the local directory:
+
+    encode render enumerate merge
+
+
+Usage
+-----
+
 There are currently lots of hardwired assumptions that need to
 be configurable eventually, but the basic idea is that if you have
 a file of points like this:
