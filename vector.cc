@@ -499,3 +499,8 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc) {
 	drawPixel(x - .5, y - .5, gc, bright, hue, meta, tc);
 }
+
+void setClip(struct graphics *gc, int x, int y, int w, int h) {
+
+}
+
