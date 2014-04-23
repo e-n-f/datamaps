@@ -5,8 +5,8 @@ This is a tool for indexing large lists of geographic points or lines
 and dynamically generating map tiles from the index for display.
 
 
-Depends
--------
+Dependencies
+------------
 
  - Modern C compiler like gcc or clang
  - make
@@ -29,9 +29,7 @@ After the build finishes you will have 4 new command line programs available in 
 Usage
 -----
 
-There are currently lots of hardwired assumptions that need to
-be configurable eventually, but the basic idea is that if you have
-a file of points like this:
+The basic idea is that if you have a file of points like this:
 
     40.711017,-74.011017
     40.710933,-74.011250
