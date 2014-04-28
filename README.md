@@ -107,6 +107,9 @@ combinations that appear in <code>dirname</code> through zoom 14,
 and <code>xargs</code> will invoke <code>render</code> on each
 of these to generate the tiles into <code>tiles/dirname</code>.
 
+You can enumerate a single zoom by specifying both -z and -Z for maximum and
+minimum. So if you want just z12, <code>enumerate -z12 -Z12</code>.
+
 The <code>-P8</code> makes xargs invoke 8 instances of <code>render</code>
 at a time. If you have a different number of CPU cores, a different number
 may work out better.
