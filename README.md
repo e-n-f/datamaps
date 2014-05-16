@@ -252,11 +252,11 @@ Thicker lines are drawn dimmer so that the overall brightness remains the same.<
 <dt>-p <i>area</i></dt>
 <dd>Specifies a multiplier for dot sizes. Point brightness is automatically reduced by
 the same factor so the total brightness remains constant, just diffused.
-The default is 1.</dd>
+The default is 1. (Example -p5 for area 5)</dd>
 
 <dt>-p g<i>area</i></dt>
 <dd>Specifies a Gaussian brush instead of a flat disk, as well as a
-multiplier for dot sizes.</dd>
+multiplier for dot sizes. (Example: -pg5 for Gaussian with area 5)</dd>
 
 </dl>
 
