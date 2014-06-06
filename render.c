@@ -31,6 +31,7 @@ double gps_dist = 1600; // about 50 feet
 double gps_ramp = 1.5;
 
 double display_gamma = .5;
+double color_cap = .7;
 
 int antialias = 1;
 double mercator = -1;
@@ -630,6 +631,8 @@ int main(int argc, char **argv) {
 						fprintf(stderr, "Can't understand unit in -x %s\n", optarg);
 						usage(argv);
 					}
+				} else if (sscanf(optarg, "s%lf", &color_cap) == 1) {
+					;
 				} else {
 					fprintf(stderr, "Can't understand -x %s\n", optarg);
 					usage(argv);
@@ -860,7 +863,7 @@ int main(int argc, char **argv) {
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", (int) (tilesize * (x2 - x1 + fx2 - fx1)), (int) (tilesize * (y2 - y1 + fy2 - fy1)));
 			prep(outdir, z_draw, x1, y1, filetype, files[0].name);
-			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
+			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap);
 		}
 	} else {
 		struct graphics *gc = graphics_init(tilesize, tilesize, &filetype);
@@ -895,7 +898,7 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			prep(outdir, z_draw, x_draw, y_draw, filetype, files[0].name);
-			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
+			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap);
 		}
 	}
 

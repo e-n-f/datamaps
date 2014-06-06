@@ -48,7 +48,7 @@ struct graphics *graphics_init(int width, int height, char **filetype) {
 	return g;
 }
 
-void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
+void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask, double color_cap) {
 	unsigned char *buf = malloc(gc->width * gc->height * 4);
 
 	int midr, midg, midb;
@@ -132,9 +132,8 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 			buf[4 * i + 3] = transparency;
 		} else {
 			if (sat != 0) {
-#define COLOR_CAP .7
-				if (gc->image[i] > limit2 * COLOR_CAP) {
-					gc->image[i] = limit2 * COLOR_CAP;
+				if (gc->image[i] > limit2 * color_cap) {
+					gc->image[i] = limit2 * color_cap;
 				}
 			}
 

@@ -280,6 +280,10 @@ The hues are numbered in degrees: 0 for red, 30 for orange, 60 for yellow, 120 f
 <dt>-x b</dt>
 <dd>Make the brightness of each feature proportional to the metadata value.</dd>
 
+<dt>-x s<i>max</i></dt>
+<dd>Cap the saturation of meta colors at <i>max</i> instead of 0.7. They will go all the way to white if you use 1.</dd>
+
+
 </dl>
 
 Compensation
