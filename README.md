@@ -114,6 +114,15 @@ The <code>-P8</code> makes xargs invoke 8 instances of <code>render</code>
 at a time. If you have a different number of CPU cores, a different number
 may work out better.
 
+If you want to filter the output of render, for example through pngquant
+to reduce the number of colors,
+you can do it by having xargs invoke a subshell.
+
+    $ enumerate -z8 dirname | xargs -L1 -P8 sh -c 'mkdir -p tiles/dirname/$2/$3; render $1 $2 $3 $4 | pngquant 32 > tiles/dirname/$2/$3/$4.png' dummy
+
+The <code>dummy</code> argument is important because <code>sh -c</code>
+eats the first argument after the command.
+
 Adding color to data
 --------------------
 
