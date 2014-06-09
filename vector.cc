@@ -178,7 +178,7 @@ static inline int compress(std::string const& input, std::string & output)
 
 static void op(env *e, int cmd, int x, int y);
 
-void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
+void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask, double color_cap) {
 	env *e = gc->e;
 	int i;
 
