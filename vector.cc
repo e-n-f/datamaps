@@ -214,7 +214,7 @@ static inline int compress(std::string const& input, std::string & output)
 
 static void op(env *e, int cmd, int x, int y);
 
-void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
+void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask, double color_cap) {
 	env *e = gc->e;
 	int i;
 
@@ -549,3 +549,8 @@ void drawPixel(double x, double y, struct graphics *gc, double bright, double hu
 void drawBrush(double x, double y, struct graphics *gc, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc, int m, struct dump_meta *data) {
 	drawPixel(x - .5, y - .5, gc, bright, hue, meta, tc, m, data);
 }
+
+void setClip(struct graphics *gc, int x, int y, int w, int h) {
+
+}
+

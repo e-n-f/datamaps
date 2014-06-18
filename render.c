@@ -31,11 +31,13 @@ double gps_dist = 1600; // about 50 feet
 double gps_ramp = 1.5;
 
 double display_gamma = .5;
+double color_cap = .7;
 
 int antialias = 1;
 double mercator = -1;
 double exponent = 2;
 int metabright = 0;
+long long maxmeta = LLONG_MAX;
 
 int tilesize = 256;
 
@@ -251,7 +253,6 @@ int process(struct file *f, int components, int z_lookup, unsigned char *startbu
 			for (i = 1; i < components + additional; i++) {
 				xa[i] = xa[i - 1] + (decodeSigned(&cp) << s);
 				ya[i] = ya[i - 1] + (decodeSigned(&cp) << s);
-
 			}
 
 			m = decodeSigned(&cp);
@@ -706,10 +707,9 @@ int main(int argc, char **argv) {
 
 				if (strcmp(optarg, "b") == 0) {
 					metabright = 1;
-				} else if (sscanf(optarg, "c%f%c", &circle, &unit) != 2) {
-					fprintf(stderr, "Can't understand -x %s\n", optarg);
-					usage(argv);
-				} else {
+				} else if (sscanf(optarg, "l%lld", &maxmeta) == 1) {
+					;
+				} else if (sscanf(optarg, "c%f%c", &circle, &unit) == 2) {
 					if (unit == 'm') {
 						circle *= 3.28; // meters to feet
 					} else if (unit == 'f') {
@@ -718,6 +718,11 @@ int main(int argc, char **argv) {
 						fprintf(stderr, "Can't understand unit in -x %s\n", optarg);
 						usage(argv);
 					}
+				} else if (sscanf(optarg, "s%lf", &color_cap) == 1) {
+					;
+				} else {
+					fprintf(stderr, "Can't understand -x %s\n", optarg);
+					usage(argv);
 				}
 			}
 			break;
@@ -941,6 +946,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%u/%u/%u\r", z_draw, x, y);
 
 				for (i = 0; i < nfiles; i++) {
+					setClip(gc, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize, tilesize, tilesize);
 					do_tile(gc, &files[i], z_draw, x, y, &colors, gps, dump, i, (x - x1 - fx1) * tilesize, (y - y1 - fy1) * tilesize, assemble);
 				}
 			}
@@ -949,7 +955,7 @@ int main(int argc, char **argv) {
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", (int) (tilesize * (x2 - x1 + fx2 - fx1)), (int) (tilesize * (y2 - y1 + fy2 - fy1)));
 			prep(outdir, z_draw, x1, y1, filetype, files[0].name);
-			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
+			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap);
 		}
 	} else {
 		struct graphics *gc = graphics_init(tilesize, tilesize, &filetype);
@@ -984,7 +990,7 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			prep(outdir, z_draw, x_draw, y_draw, filetype, files[0].name);
-			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask);
+			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap);
 		}
 	}
 

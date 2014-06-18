@@ -4,9 +4,32 @@ Datamaps
 This is a tool for indexing large lists of geographic points or lines
 and dynamically generating map tiles from the index for display.
 
-There are currently lots of hardwired assumptions that need to
-be configurable eventually, but the basic idea is that if you have
-a file of points like this:
+
+Dependencies
+------------
+
+ - Modern C compiler like gcc or clang
+ - make
+ - libpng
+ - Ideally a 64 bit machine with >8 GB free memory
+
+
+Installation
+------------
+
+First install `make` and `libpng` then type:
+
+    make
+
+After the build finishes you will have 4 new command line programs available in the local directory:
+
+    encode render enumerate merge
+
+
+Usage
+-----
+
+The basic idea is that if you have a file of points like this:
 
     40.711017,-74.011017
     40.710933,-74.011250
@@ -84,9 +107,21 @@ combinations that appear in <code>dirname</code> through zoom 14,
 and <code>xargs</code> will invoke <code>render</code> on each
 of these to generate the tiles into <code>tiles/dirname</code>.
 
+You can enumerate a single zoom by specifying both -z and -Z for maximum and
+minimum. So if you want just z12, <code>enumerate -z12 -Z12</code>.
+
 The <code>-P8</code> makes xargs invoke 8 instances of <code>render</code>
 at a time. If you have a different number of CPU cores, a different number
 may work out better.
+
+If you want to filter the output of render, for example through pngquant
+to reduce the number of colors,
+you can do it by having xargs invoke a subshell.
+
+    $ enumerate -z8 dirname | xargs -L1 -P8 sh -c 'mkdir -p tiles/dirname/$2/$3; render $1 $2 $3 $4 | pngquant 32 > tiles/dirname/$2/$3/$4.png' dummy
+
+The <code>dummy</code> argument is important because <code>sh -c</code>
+eats the first argument after the command.
 
 Adding color to data
 --------------------
@@ -222,11 +257,11 @@ Thicker lines are drawn dimmer so that the overall brightness remains the same.<
 <dt>-p <i>area</i></dt>
 <dd>Specifies a multiplier for dot sizes. Point brightness is automatically reduced by
 the same factor so the total brightness remains constant, just diffused.
-The default is 1.</dd>
+The default is 1. (Example -p5 for area 5)</dd>
 
 <dt>-p g<i>area</i></dt>
 <dd>Specifies a Gaussian brush instead of a flat disk, as well as a
-multiplier for dot sizes.</dd>
+multiplier for dot sizes. (Example: -pg5 for Gaussian with area 5)</dd>
 
 </dl>
 
@@ -249,6 +284,10 @@ The hues are numbered in degrees: 0 for red, 30 for orange, 60 for yellow, 120 f
 
 <dt>-x b</dt>
 <dd>Make the brightness of each feature proportional to the metadata value.</dd>
+
+<dt>-x s<i>max</i></dt>
+<dd>Cap the saturation of meta colors at <i>max</i> instead of 0.7. They will go all the way to white if you use 1.</dd>
+
 
 </dl>
 
