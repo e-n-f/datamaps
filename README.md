@@ -93,6 +93,19 @@ which isn't going to work for large files on 32-bit machines.
 Performance, especially at low zoom levels, will be much better if the file actually fits
 in memory instead of having to be swapped in.
 
+Merging files
+-------------
+
+<code>encode</code> will only write to a brand new file. If you want to add data
+to an existing file, the way to do it is to create a new file with <code>encode</code>
+and then use <code>merge</code> to combine the old and the new.
+
+    $ cat newdata | encode -o new.dm
+    $ merge -o combined.dm old.dm new.dm
+
+<code>merge</code> also has an option, <code>-u</code>, to eliminate duplicates
+between the source files while merging them.
+
 Generating a tileset
 --------------------
 
