@@ -305,7 +305,9 @@ The hues are numbered in degrees: 0 for red, 30 for orange, 60 for yellow, 120 f
 <dt>-x s<i>max</i></dt>
 <dd>Cap the saturation of meta colors at <i>max</i> instead of 0.7. They will go all the way to white if you use 1.</dd>
 
-
+<dt>-x u</dt>
+<dd>Use an approximation of CIELCH uniform color space so that all hues with the same density will
+have approximately equal lightness and saturation. Blues will be brighter and greens will be dimmer.</dd>
 </dl>
 
 Compensation

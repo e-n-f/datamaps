@@ -48,7 +48,7 @@ struct graphics *graphics_init(int width, int height, char **filetype) {
 	return g;
 }
 
-void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask, double color_cap) {
+void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask, double color_cap, int cie) {
 	unsigned char *buf = malloc(gc->width * gc->height * 4);
 
 	int midr, midg, midb;
@@ -82,15 +82,31 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 				sat = sqrt(gc->cx[i] * gc->cx[i] + gc->cy[i] * gc->cy[i]) / gc->image[i];
 			}
 
-			// http://basecase.org/env/on-rainbows
-			h += .5;
-			h *= -1;
-			double r1 = sin(M_PI * h);
-			double g1 = sin(M_PI * (h + 1.0/3));
-			double b1 = sin(M_PI * (h + 2.0/3));
-			midr = 255 * (r1 * r1) * sat + r * (1 - sat);
-			midg = 255 * (g1 * g1) * sat + g * (1 - sat);
-			midb = 255 * (b1 * b1) * sat + b * (1 - sat);
+			if (cie) {
+				h *= 2 * M_PI;
+				// put red at the right
+				h = h + (M_PI / 2 - (M_PI - 2));
+
+				double l = .5;
+
+				double r1 = sin(h + M_PI - 2.0) * 0.417211 * sat + l;
+				double g1 = sin(h + M_PI + 1.5) * 0.158136 * sat + l;
+				double b1 = sin(h + M_PI      ) * 0.455928 * sat + l;
+
+				midr = exp(log(r1 * 0.923166 + 0.0791025) * 1.25) * 255;
+				midg = exp(log(g1 * 0.923166 + 0.0791025) * 1.25) * 255;
+				midb = exp(log(b1 * 0.923166 + 0.0791025) * 1.25) * 255;
+			} else {
+				// http://basecase.org/env/on-rainbows
+				h += .5;
+				h *= -1;
+				double r1 = sin(M_PI * h);
+				double g1 = sin(M_PI * (h + 1.0/3));
+				double b1 = sin(M_PI * (h + 2.0/3));
+				midr = 255 * (r1 * r1) * sat + r * (1 - sat);
+				midg = 255 * (g1 * g1) * sat + g * (1 - sat);
+				midb = 255 * (b1 * b1) * sat + b * (1 - sat);
+			}
 		}
 
 		int fg = 255;

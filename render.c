@@ -32,6 +32,7 @@ double gps_ramp = 1.5;
 
 double display_gamma = .5;
 double color_cap = .7;
+int cie = 0;
 
 int antialias = 1;
 double mercator = -1;
@@ -620,6 +621,8 @@ int main(int argc, char **argv) {
 
 				if (strcmp(optarg, "b") == 0) {
 					metabright = 1;
+				} else if (strcmp(optarg, "u") == 0) {
+					cie = 1;
 				} else if (sscanf(optarg, "l%lld", &maxmeta) == 1) {
 					;
 				} else if (sscanf(optarg, "c%f%c", &circle, &unit) == 2) {
@@ -863,7 +866,7 @@ int main(int argc, char **argv) {
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", (int) (tilesize * (x2 - x1 + fx2 - fx1)), (int) (tilesize * (y2 - y1 + fy2 - fy1)));
 			prep(outdir, z_draw, x1, y1, filetype, files[0].name);
-			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap);
+			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap, cie);
 		}
 	} else {
 		struct graphics *gc = graphics_init(tilesize, tilesize, &filetype);
@@ -898,7 +901,7 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			prep(outdir, z_draw, x_draw, y_draw, filetype, files[0].name);
-			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap);
+			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap, cie);
 		}
 	}
 
