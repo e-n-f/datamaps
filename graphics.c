@@ -48,7 +48,7 @@ struct graphics *graphics_init(int width, int height, char **filetype) {
 	return g;
 }
 
-void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask, double color_cap, int cie) {
+void out(struct graphics *gc, int transparency, double gamma, int invert, int bg, int color, int color2, int saturate, int mask, double color_cap, int cie) {
 	unsigned char *buf = malloc(gc->width * gc->height * 4);
 
 	int midr, midg, midb;
@@ -110,12 +110,12 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 		}
 
 		int fg = 255;
-		int bg = 0;
-
 		if (invert) {
-			bg = 255;
 			fg = 0;
 		}
+		int bg_r = (bg >> 16) & 0xFF;
+		int bg_g = (bg >>  8) & 0xFF;
+		int bg_b = (bg >>  0) & 0xFF;
 
 		int r2, g2, b2;
 		if (color2 < 0) {
@@ -142,9 +142,9 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 		}
 
 		if (gc->image[i] == 0) {
-			buf[4 * i + 0] = bg;
-			buf[4 * i + 1] = bg;
-			buf[4 * i + 2] = bg;
+			buf[4 * i + 0] = bg_r;
+			buf[4 * i + 1] = bg_g;
+			buf[4 * i + 2] = bg_b;
 			buf[4 * i + 3] = transparency;
 		} else {
 			if (sat != 0) {
@@ -165,9 +165,9 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int co
 				double along = gc->image[i] / limit;
 				double opacity = (255 * along + transparency * (1 - along)) / 255;
 
-				buf[4 * i + 0] = midr * along / opacity + bg * (1 - along / opacity);
-				buf[4 * i + 1] = midg * along / opacity + bg * (1 - along / opacity);
-				buf[4 * i + 2] = midb * along / opacity + bg * (1 - along / opacity);
+				buf[4 * i + 0] = midr * along / opacity + bg_r * (1 - along / opacity);
+				buf[4 * i + 1] = midg * along / opacity + bg_g * (1 - along / opacity);
+				buf[4 * i + 2] = midb * along / opacity + bg_b * (1 - along / opacity);
 				buf[4 * i + 3] = opacity * 255;
 			} else if (gc->image[i] <= limit2) {
 				double along = (gc->image[i] - limit) / (limit2 - limit);

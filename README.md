@@ -214,6 +214,15 @@ Background
 <dt>-t <i>opacity</i>
 <dd>Changes the background opacity. The default is 255, fully opaque.</dd>
 
+<dt>-w</dt>
+<dd>The default background color becomes white, not black.</dd>
+</dl>
+
+<dt>-b <i>hex</i></dt>
+<dd>Specifies <i>hex</i> to be the background color.
+The default is black (or white, if -w is set.)</dd>
+</dl>
+
 <dt>-m</dt>
 <dd>Makes the output image a mask: The data areas are transparent and the background is opaque.
 The default is the opposite.</dd>
@@ -235,10 +244,6 @@ The default is white.</dd>
 <dd>Use only the color range leading up to full saturation.
 The default treats saturated color as the middle of the range
 and allows the output to be oversaturated all the way to white (or the -S color).</dd>
-
-<dt>-w</dt>
-<dd>The background is white, not black.</dd>
-</dl>
 
 Brightness and thickness
 ------------------------
