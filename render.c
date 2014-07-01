@@ -460,8 +460,8 @@ void prep(char *outdir, int z, int x, int y, char *filetype, char *fname) {
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t transparency] [-dga] [-C colors] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] [-l lineramp] file z x y\n", argv[0]);
-	fprintf(stderr, "Usage: %s -A [-t transparency] [-dga] [-C colors] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] [-l lineramp] file z minlat minlon maxlat maxlon\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t transparency] [-adgmrsw] [-C colors] [-b bgcolor] [-c color1] [-S color2] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] [-l lineramp] file z x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s -A [-t transparency] [-adgmrsw] [-C colors] [-b bgcolor] [-c color1] [-S color2] [-B zoom:level:ramp] [-G gamma] [-O offset] [-M latitude] [-l lineramp] file z minlat minlon maxlat maxlon\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -476,6 +476,7 @@ int main(int argc, char **argv) {
 	struct color_range colors;
 	int assemble = 0;
 	int invert = 0;
+	int bg = 0; // bg is #000000 by default
 	int color = -1;
 	int color2 = -1;
 	int saturate = 1;
@@ -498,7 +499,7 @@ int main(int argc, char **argv) {
 	int nfiles = 0;
 	struct file files[argc];
 
-	while ((i = getopt(argc, argv, "t:dDgC:B:G:O:M:aAwc:l:L:smf:S:T:o:x:e:p:vr")) != -1) {
+	while ((i = getopt(argc, argv, "aAb:B:c:C:dDe:f:gG:l:L:mM:o:O:p:rsS:t:T:vwx:")) != -1) {
 		switch (i) {
 		case 't':
 			transparency = atoi(optarg);
@@ -600,7 +601,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'w':
-			invert = 1;
+			bg = strtoul("FFFFFF", NULL, 16);
+			break;
+
+		case 'b':
+			bg = strtoul(optarg, NULL, 16);
 			break;
 
 		case 'f':
@@ -679,11 +684,10 @@ int main(int argc, char **argv) {
 
 	if (vector_styles) {
 		printf("Map {\n");
-		if (invert) {
-			printf("  background-color: rgba(255,255,255,%.3f);\n", transparency / 255.0);
-		} else {
-			printf("  background-color: rgba(0,0,0,%.3f);\n", transparency / 255.0);
-		}
+		int bg_r = (bg >> 16)  & 0xFF;
+		int bg_g = (bg >> 8)   & 0xFF;
+		int bg_b = (bg)        & 0xFF;
+		printf("  background-color: rgba(%d,%d,%d,%.3f);\n", bg_r, bg_g, bg_b, transparency / 255.0);
 		printf("}\n\n");
 
 		printf("#points {\n");
@@ -866,7 +870,7 @@ int main(int argc, char **argv) {
 		if (!dump) {
 			fprintf(stderr, "output: %d by %d\n", (int) (tilesize * (x2 - x1 + fx2 - fx1)), (int) (tilesize * (y2 - y1 + fy2 - fy1)));
 			prep(outdir, z_draw, x1, y1, filetype, files[0].name);
-			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap, cie);
+			out(gc, transparency, display_gamma, invert, bg, color, color2, saturate, mask, color_cap, cie);
 		}
 	} else {
 		struct graphics *gc = graphics_init(tilesize, tilesize, &filetype);
@@ -901,7 +905,7 @@ int main(int argc, char **argv) {
 
 		if (!dump) {
 			prep(outdir, z_draw, x_draw, y_draw, filetype, files[0].name);
-			out(gc, transparency, display_gamma, invert, color, color2, saturate, mask, color_cap, cie);
+			out(gc, transparency, display_gamma, invert, bg, color, color2, saturate, mask, color_cap, cie);
 		}
 	}
 

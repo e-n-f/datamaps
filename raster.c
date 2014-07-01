@@ -21,7 +21,7 @@ struct graphics *graphics_init(int width, int height, char **filetype) {
 	return g;
 }
 
-void out(struct graphics *gc, int transparency, double gamma, int invert, int color, int color2, int saturate, int mask) {
+void out(struct graphics *gc, int transparency, double gamma, int invert, int bg, int color, int color2, int saturate, int mask) {
 }
 
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
