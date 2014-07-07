@@ -38,6 +38,7 @@ int antialias = 1;
 double mercator = -1;
 double exponent = 2;
 int metabright = 0;
+int metabrush = 0;
 long long maxmeta = LLONG_MAX;
 
 int tilesize = 256;
@@ -222,9 +223,13 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		}
 
 		double bright = bright1;
+		double bb = b;
 
 		if (metabright) {
 			bright *= meta;
+		}
+		if (metabrush) {
+			bb = bb * meta;
 		}
 
 		for (k = 0; k < components; k++) {
@@ -261,10 +266,10 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 
 			if (circle > 0) {
 				if (size < .5) {
-					if (b <= 1) {
-						drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b * meta / innerstep, hue, meta, &tc);
+					if (bb <= 1) {
+						drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * bb * meta / innerstep, hue, meta, &tc);
 					} else {
-						drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright * meta / innerstep, b, hue, meta, gaussian, &tc);
+						drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright * meta / innerstep, bb, hue, meta, gaussian, &tc);
 						ret = 1;
 					}
 				} else {
@@ -284,20 +289,20 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 							double xp = xc + size * r * cos(ang);
 							double yp = yc + size * r * sin(ang);
 
-							if (b <= 1) {
-								drawPixel(xp - .5, yp - .5, gc, bright * b, hue, meta, &tc);
+							if (bb <= 1) {
+								drawPixel(xp - .5, yp - .5, gc, bright * bb, hue, meta, &tc);
 							} else {
-								drawBrush(xp, yp, gc, bright, b, hue, meta, gaussian, &tc);
+								drawBrush(xp, yp, gc, bright, bb, hue, meta, gaussian, &tc);
 								ret = 1;
 							}
 						}
 					}
 				}
 			} else {
-				if (b <= 1) {
-					drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * b, hue, meta, &tc);
+				if (bb <= 1) {
+					drawPixel((xd[0] * tilesize - .5) + xoff, (yd[0] * tilesize - .5) + yoff, gc, bright * bb, hue, meta, &tc);
 				} else {
-					drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, b, hue, meta, gaussian, &tc);
+					drawBrush((xd[0] * tilesize) + xoff, (yd[0] * tilesize) + yoff, gc, bright, bb, hue, meta, gaussian, &tc);
 					ret = 1;
 				}
 			}
@@ -626,6 +631,8 @@ int main(int argc, char **argv) {
 
 				if (strcmp(optarg, "b") == 0) {
 					metabright = 1;
+				} else if (strcmp(optarg, "r") == 0) {
+					metabrush = 1;
 				} else if (strcmp(optarg, "u") == 0) {
 					cie = 1;
 				} else if (sscanf(optarg, "l%lld", &maxmeta) == 1) {
