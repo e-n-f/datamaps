@@ -83,15 +83,20 @@ void out(struct graphics *gc, int transparency, double gamma, int invert, int bg
 			}
 
 			if (cie) {
+				double l = .5;
+				double c = sat;
 				h *= 2 * M_PI;
+
 				// put red at the right
 				h = h + (M_PI / 2 - (M_PI - 2));
 
-				double l = .5;
+				if (c > 1 - 2 * fabs(l - .5)) {
+					c = 1 - 2 * fabs(l - .5);
+				}
 
-				double r1 = sin(h + M_PI - 2.0) * 0.417211 * sat + l;
-				double g1 = sin(h + M_PI + 1.5) * 0.158136 * sat + l;
-				double b1 = sin(h + M_PI      ) * 0.455928 * sat + l;
+				double r1 = sin(h + M_PI - 2.0) * 0.417211 * c + l;
+				double g1 = sin(h + M_PI + 1.5) * 0.158136 * c + l;
+				double b1 = sin(h + M_PI      ) * 0.455928 * c + l;
 
 				midr = exp(log(r1 * 0.923166 + 0.0791025) * 1.25) * 255;
 				midg = exp(log(g1 * 0.923166 + 0.0791025) * 1.25) * 255;
