@@ -607,6 +607,7 @@ int main(int argc, char **argv) {
 
 		case 'w':
 			bg = strtoul("FFFFFF", NULL, 16);
+			invert = 1;
 			break;
 
 		case 'b':
