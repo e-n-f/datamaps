@@ -21,7 +21,7 @@ struct graphics *graphics_init(int width, int height, char **filetype) {
 	return g;
 }
 
-void out(struct graphics *gc, int transparency, double gamma, int invert, int bg, int color, int color2, int saturate, int mask) {
+void out(struct graphics *gc, int transparency, double gamma, int invert, int bg, int color, int color2, int saturate, int mask, double color_cap, int cie) {
 }
 
 // http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#C
@@ -97,4 +97,8 @@ void drawPixel(double x, double y, struct graphics *g, double bright, double hue
 
 void drawBrush(double x, double y, struct graphics *g, double bright, double brush, double hue, long long meta, int gaussian, struct tilecontext *tc) {
 	drawPixel(x, y, g, bright, hue, meta, tc);
+}
+
+void setClip(struct graphics *gc, int x, int y, int w, int h) {
+
 }
