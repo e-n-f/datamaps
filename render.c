@@ -214,11 +214,16 @@ int process(char *fname, int components, int z_lookup, unsigned char *startbuf, 
 		double hue = -1;
 		if (metabits > 0 && colors->active) {
 			hue = (((double) meta - colors->meta1) / (colors->meta2 - colors->meta1) * (colors->hue2 - colors->hue1) + colors->hue1) / 360;
-			while (hue < 0) {
-				hue++;
-			}
-			while (hue > 1) {
-				hue--;
+
+			if (hue < -2) {
+				hue = -1;
+			} else {
+				while (hue < 0) {
+					hue++;
+				}
+				while (hue > 1) {
+					hue--;
+				}
 			}
 		}
 
